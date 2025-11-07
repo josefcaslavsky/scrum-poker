@@ -51,6 +51,75 @@ body {
   color: rgba(255, 255, 255, 0.9);
 }
 
+.session-info {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-top: 15px;
+  font-size: 0.9em;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.session-code,
+.round-info {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 5px 15px;
+  border-radius: 15px;
+  font-weight: 600;
+}
+
+/* Timer Section */
+.timer-section {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 30px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.timer-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+  font-size: 1.5em;
+}
+
+.timer-label {
+  color: #333;
+  font-weight: 600;
+}
+
+.timer-value {
+  font-size: 1.8em;
+  font-weight: bold;
+  transition: color 0.3s ease;
+}
+
+.timer-bar {
+  width: 100%;
+  height: 12px;
+  background: #e0e0e0;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.timer-progress {
+  height: 100%;
+  transition: width 1s linear, background-color 0.3s ease;
+  border-radius: 6px;
+}
+
+.voting-status {
+  text-align: center;
+  font-size: 1.1em;
+  color: #666;
+  font-weight: 600;
+}
+
 /* Card Grid */
 .card-grid {
   display: grid;
@@ -76,6 +145,15 @@ body {
 
 .poker-card.selected {
   transform: scale(1.1);
+}
+
+.poker-card.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.poker-card.disabled:hover {
+  transform: none;
 }
 
 .card-inner {
@@ -212,6 +290,92 @@ body {
   background: white;
   color: #4facfe;
   border: 2px solid #4facfe;
+}
+
+/* Results Section */
+.results-section {
+  animation: fadeInUp 0.8s ease-out;
+  margin-bottom: 40px;
+}
+
+.results-title {
+  text-align: center;
+  color: white;
+  font-size: 2.5em;
+  margin-bottom: 30px;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.results-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.result-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: transform 0.3s ease;
+}
+
+.result-card:hover {
+  transform: translateY(-5px);
+}
+
+.result-participant {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.result-emoji {
+  font-size: 2em;
+}
+
+.result-name {
+  font-weight: 600;
+  color: #333;
+  font-size: 1.1em;
+}
+
+.result-vote {
+  text-align: center;
+  font-size: 3em;
+  font-weight: bold;
+  color: #4facfe;
+}
+
+.results-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.stat-card {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 25px;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+.stat-label {
+  font-size: 1em;
+  color: #666;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.stat-value {
+  font-size: 2.5em;
+  font-weight: bold;
+  color: #4facfe;
 }
 
 /* Animations */
