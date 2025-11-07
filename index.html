@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hello World - Scrum Poker</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .container {
+      text-align: center;
+      color: white;
+      padding: 40px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    }
+
+    h1 {
+      font-size: 3em;
+      margin: 0 0 20px 0;
+    }
+
+    p {
+      font-size: 1.2em;
+      margin: 10px 0;
+    }
+
+    .version {
+      margin-top: 30px;
+      font-size: 0.9em;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Hello World!</h1>
+    <p>Welcome to Scrum Poker Desktop App</p>
+    <div class="version">
+      <p>Electron: <span id="electron-version"></span></p>
+      <p>Node: <span id="node-version"></span></p>
+      <p>Chrome: <span id="chrome-version"></span></p>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('electron-version').innerText = process.versions.electron;
+    document.getElementById('node-version').innerText = process.versions.node;
+    document.getElementById('chrome-version').innerText = process.versions.chrome;
+  </script>
+</body>
+</html>
