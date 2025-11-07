@@ -48,6 +48,14 @@ export function useMockApi() {
    * Get random delay for a participant
    */
   const getRandomDelay = (participantId) => {
+    // Check if running in E2E test mode via NODE_ENV
+    // In test mode, use faster but reasonable delays to allow test interactions
+    const isTestMode = window.api?.nodeEnv === 'test';
+
+    if (isTestMode) {
+      return Math.floor(Math.random() * 1000) + 2000; // 2000-3000ms for tests
+    }
+
     const profile = PARTICIPANT_PROFILES[participantId];
     if (!profile) return 5000;
 

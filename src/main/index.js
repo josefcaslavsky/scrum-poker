@@ -20,8 +20,8 @@ function createWindow() {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'));
   }
 
-  // Open DevTools in development
-  if (!app.isPackaged) {
+  // Open DevTools in development mode, but not during E2E tests
+  if (process.env.ELECTRON_RENDERER_URL && process.env.NODE_ENV !== 'test') {
     mainWindow.webContents.openDevTools();
   }
 }

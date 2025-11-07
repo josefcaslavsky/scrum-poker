@@ -4,5 +4,6 @@ import { contextBridge } from 'electron';
 // the ipcRenderer without exposing the entire object
 contextBridge.exposeInMainWorld('api', {
   // Add any API methods here later
-  platform: process.platform
+  platform: process.platform,
+  nodeEnv: process.env.NODE_ENV || 'development'
 });
