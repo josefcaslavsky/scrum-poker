@@ -115,7 +115,16 @@ export function useMockApi() {
    */
   const startNewRound = () => {
     clearAllTimeouts();
-    startVotingRound();
+    sessionStore.startNewRound();
+
+    // Simulate votes for all non-user participants
+    const aiParticipants = sessionStore.participants
+      .filter(p => !p.isUser)
+      .map(p => p.id);
+
+    aiParticipants.forEach(participantId => {
+      simulateParticipantVote(participantId);
+    });
   };
 
   /**

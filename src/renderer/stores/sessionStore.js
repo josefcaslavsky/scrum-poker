@@ -106,7 +106,7 @@ export const useSessionStore = defineStore('session', () => {
 
   // Actions
   const selectCard = (value) => {
-    if (isRevealed.value) return;
+    if (isRevealed.value || !isVoting.value) return;
 
     userCard.value = value;
     const user = participants.value.find(p => p.isUser);

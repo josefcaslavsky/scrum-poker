@@ -9,17 +9,24 @@
     "preview": "electron-vite preview",
     "build:win": "npm run build && electron-builder --win --config",
     "build:mac": "npm run build && electron-builder --mac --config",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@pinia/testing": "^1.0.3",
     "@vitejs/plugin-vue": "^6.0.1",
+    "@vitest/ui": "^4.0.8",
+    "@vue/test-utils": "^2.4.6",
     "electron": "^39.1.1",
     "electron-builder": "^26.0.12",
     "electron-vite": "^4.0.1",
-    "vite": "^7.2.2"
+    "happy-dom": "^20.0.10",
+    "vite": "^7.2.2",
+    "vitest": "^4.0.8"
   },
   "dependencies": {
     "canvas-confetti": "^1.9.4",
@@ -37,11 +44,15 @@
       "out/**/*"
     ],
     "mac": {
-      "target": ["dmg"],
+      "target": [
+        "dmg"
+      ],
       "category": "public.app-category.developer-tools"
     },
     "win": {
-      "target": ["nsis"]
+      "target": [
+        "nsis"
+      ]
     }
   }
 }

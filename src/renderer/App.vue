@@ -8,111 +8,46 @@
           Scrum Poker
         </h1>
         <p class="subtitle">Let's estimate some stories!</p>
-        <div class="session-info">
-          <span class="session-code">Session: {{ store.sessionCode }}</span>
-          <span class="round-info">Round {{ store.currentRound }}</span>
-        </div>
+        <SessionInfo
+          :session-code="store.sessionCode"
+          :current-round="store.currentRound"
+        />
       </div>
 
       <!-- Timer (shown only during voting) -->
-      <div v-if="store.isVoting && !store.isRevealed" class="timer-section">
-        <div class="timer-display">
-          <span class="timer-label">Time remaining:</span>
-          <span class="timer-value" :style="{ color: store.timerColor }">
-            {{ store.timerSeconds }}s
-          </span>
-        </div>
-        <div class="timer-bar">
-          <div
-            class="timer-progress"
-            :style="{
-              width: store.timerProgress + '%',
-              backgroundColor: store.timerColor
-            }"
-          ></div>
-        </div>
-        <div class="voting-status">
-          {{ store.votedCount }} / {{ store.totalCount }} voted
-        </div>
-      </div>
+      <VotingTimer
+        v-if="store.isVoting && !store.isRevealed"
+        :seconds="store.timerSeconds"
+        :progress="store.timerProgress"
+        :timer-color="store.timerColor"
+        :voted-count="store.votedCount"
+        :total-count="store.totalCount"
+      />
 
       <!-- Card Grid -->
       <div v-if="!store.isRevealed" class="card-grid">
-        <div
+        <PokerCard
           v-for="card in cards"
           :key="card.value"
-          class="poker-card"
-          :class="{
-            selected: store.userCard === card.value,
-            disabled: !store.isVoting
-          }"
-          @click="handleCardClick(card.value)"
-        >
-          <div class="card-inner">
-            <div class="card-front">
-              <span class="card-value">{{ card.label }}</span>
-            </div>
-            <div class="card-back">
-              <span class="card-pattern">🃏</span>
-            </div>
-          </div>
-        </div>
+          :value="card.value"
+          :label="card.label"
+          :is-selected="store.userCard === card.value"
+          :disabled="!store.isVoting"
+          @select="handleCardClick"
+        />
       </div>
 
       <!-- Results View (shown after reveal) -->
-      <div v-if="store.isRevealed" class="results-section">
-        <h2 class="results-title">Results 🎯</h2>
-
-        <div class="results-cards">
-          <div
-            v-for="participant in store.participants"
-            :key="participant.id"
-            class="result-card"
-          >
-            <div class="result-participant">
-              <span class="result-emoji">{{ participant.emoji }}</span>
-              <span class="result-name">{{ participant.name }}</span>
-            </div>
-            <div class="result-vote">
-              {{ getCardLabel(participant.vote) }}
-            </div>
-          </div>
-        </div>
-
-        <div class="results-stats">
-          <div class="stat-card">
-            <div class="stat-label">Average</div>
-            <div class="stat-value">{{ store.averageVote || 'N/A' }}</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Consensus</div>
-            <div class="stat-value">{{ store.consensus }}</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Most Voted</div>
-            <div class="stat-value">{{ getCardLabel(store.mostVoted) }}</div>
-          </div>
-        </div>
-      </div>
+      <ResultsView
+        v-if="store.isRevealed"
+        :participants="store.participants"
+        :average-vote="store.averageVote"
+        :consensus="store.consensus"
+        :most-voted="store.mostVoted"
+      />
 
       <!-- Participants -->
-      <div class="participants">
-        <h3>Participants ({{ store.participants.length }})</h3>
-        <div class="participant-list">
-          <div
-            v-for="participant in store.participants"
-            :key="participant.id"
-            class="participant"
-            :class="{ voted: participant.hasVoted }"
-          >
-            <div class="participant-avatar">{{ participant.emoji }}</div>
-            <div class="participant-name">{{ participant.name }}</div>
-            <div class="participant-status">
-              {{ participant.hasVoted ? '✓' : '⏱' }}
-            </div>
-          </div>
-        </div>
-      </div>
+      <ParticipantList :participants="store.participants" />
 
       <!-- Actions -->
       <div class="actions">
@@ -148,6 +83,13 @@ import { useSessionStore } from './stores/sessionStore';
 import { useMockApi } from './composables/useMockApi';
 import confetti from 'canvas-confetti';
 
+// Import components
+import PokerCard from './components/PokerCard.vue';
+import VotingTimer from './components/VotingTimer.vue';
+import ParticipantList from './components/ParticipantList.vue';
+import ResultsView from './components/ResultsView.vue';
+import SessionInfo from './components/SessionInfo.vue';
+
 const store = useSessionStore();
 const mockApi = useMockApi();
 
@@ -164,12 +106,6 @@ const cards = [
   { value: -1, label: '?' },
   { value: -2, label: '☕' }
 ];
-
-const getCardLabel = (value) => {
-  if (value === null) return 'N/A';
-  const card = cards.find(c => c.value === value);
-  return card ? card.label : 'N/A';
-};
 
 const handleCardClick = (value) => {
   if (!store.isVoting || store.isRevealed) return;
