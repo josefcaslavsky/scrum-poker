@@ -146,3 +146,11 @@ vite.config.ts.timestamp-*
 # Playwright
 test-results/
 playwright-report/
+
+# Electron build output
+dist/
+*.dmg
+*.exe
+*.AppImage
+*.deb
+*.snap
