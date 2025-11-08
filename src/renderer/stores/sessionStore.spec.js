@@ -16,32 +16,84 @@ describe('sessionStore', () => {
     it('has correct initial values', () => {
       const store = useSessionStore();
 
-      expect(store.sessionCode).toBe('ABC123');
+      expect(store.sessionCode).toBeNull();
       expect(store.currentRound).toBe(1);
-      expect(store.participants).toHaveLength(5);
+      expect(store.inSession).toBe(false);
+      expect(store.participants).toHaveLength(0);
       expect(store.userCard).toBeNull();
       expect(store.timerSeconds).toBe(15);
       expect(store.isRevealed).toBe(false);
       expect(store.isVoting).toBe(false);
     });
 
-    it('has 5 participants with correct structure', () => {
+    it('has correct initial user state', () => {
       const store = useSessionStore();
 
-      expect(store.participants).toHaveLength(5);
+      expect(store.currentUser.name).toBe('Anonymous');
+      expect(store.currentUser.emoji).toBe('👤');
+      expect(store.currentUser.isFacilitator).toBe(false);
+    });
+  });
 
-      const user = store.participants[0];
-      expect(user.id).toBe(1);
-      expect(user.name).toBe('You');
-      expect(user.isUser).toBe(true);
-      expect(user.hasVoted).toBe(false);
-      expect(user.vote).toBeNull();
+  describe('Session Management', () => {
+    it('createSession initializes a new session', () => {
+      const store = useSessionStore();
+
+      store.createSession({ name: 'John', emoji: '🚀' });
+
+      expect(store.inSession).toBe(true);
+      expect(store.sessionCode).toBeTruthy();
+      expect(store.sessionCode).toHaveLength(6);
+      expect(store.currentUser.name).toBe('John');
+      expect(store.currentUser.emoji).toBe('🚀');
+      expect(store.currentUser.isFacilitator).toBe(true);
+      expect(store.participants).toHaveLength(5);
+      expect(store.participants[0].name).toBe('John');
+      expect(store.participants[0].emoji).toBe('🚀');
+      expect(store.participants[0].isUser).toBe(true);
+    });
+
+    it('joinSession joins existing session', () => {
+      const store = useSessionStore();
+
+      store.joinSession('TEST123', { name: 'Jane', emoji: '🎯' });
+
+      expect(store.inSession).toBe(true);
+      expect(store.sessionCode).toBe('TEST123');
+      expect(store.currentUser.name).toBe('Jane');
+      expect(store.currentUser.emoji).toBe('🎯');
+      expect(store.currentUser.isFacilitator).toBe(false);
+      expect(store.participants).toHaveLength(5);
+    });
+
+    it('joinSession throws error for invalid session ID', () => {
+      const store = useSessionStore();
+
+      expect(() => {
+        store.joinSession('AB', { name: 'Jane', emoji: '🎯' });
+      }).toThrow('Invalid session code');
+    });
+
+    it('leaveSession resets state', () => {
+      const store = useSessionStore();
+
+      store.createSession({ name: 'John', emoji: '🚀' });
+      store.startVoting();
+
+      store.leaveSession();
+
+      expect(store.inSession).toBe(false);
+      expect(store.sessionCode).toBeNull();
+      expect(store.participants).toHaveLength(0);
+      expect(store.isVoting).toBe(false);
+      expect(store.isRevealed).toBe(false);
     });
   });
 
   describe('Computed Properties', () => {
     it('calculates allVoted correctly', () => {
       const store = useSessionStore();
+      store.createSession({ name: 'Test', emoji: '👤' });
 
       expect(store.allVoted).toBe(false);
 
@@ -55,6 +107,7 @@ describe('sessionStore', () => {
 
     it('calculates votedCount correctly', () => {
       const store = useSessionStore();
+      store.createSession({ name: 'Test', emoji: '👤' });
 
       expect(store.votedCount).toBe(0);
 
@@ -66,6 +119,7 @@ describe('sessionStore', () => {
 
     it('calculates timerColor correctly', () => {
       const store = useSessionStore();
+      store.createSession({ name: 'Test', emoji: '👤' });
 
       store.timerSeconds = 15;
       expect(store.timerColor).toBe('#4caf50'); // Green
@@ -79,6 +133,7 @@ describe('sessionStore', () => {
 
     it('calculates timerProgress correctly', () => {
       const store = useSessionStore();
+      store.createSession({ name: 'Test', emoji: '👤' });
 
       store.timerSeconds = 15;
       expect(store.timerProgress).toBe(100);
@@ -92,6 +147,7 @@ describe('sessionStore', () => {
 
     it('calculates averageVote correctly', () => {
       const store = useSessionStore();
+      store.createSession({ name: 'Test', emoji: '👤' });
 
       store.isRevealed = true;
       store.participants[0].vote = 2;
@@ -106,6 +162,7 @@ describe('sessionStore', () => {
 
     it('excludes special votes from average', () => {
       const store = useSessionStore();
+      store.createSession({ name: 'Test', emoji: '👤' });
 
       store.isRevealed = true;
       store.participants[0].vote = 2;
@@ -120,6 +177,7 @@ describe('sessionStore', () => {
 
     it('calculates consensus correctly', () => {
       const store = useSessionStore();
+      store.createSession({ name: 'Test', emoji: '👤' });
       store.isRevealed = true;
 
       // Perfect consensus
@@ -145,6 +203,7 @@ describe('sessionStore', () => {
 
     it('calculates mostVoted correctly', () => {
       const store = useSessionStore();
+      store.createSession({ name: 'Test', emoji: '👤' });
       store.isRevealed = true;
 
       store.participants[0].vote = 3;
@@ -160,6 +219,7 @@ describe('sessionStore', () => {
   describe('Actions', () => {
     it('selectCard updates user vote', () => {
       const store = useSessionStore();
+      store.createSession({ name: 'Test', emoji: '👤' });
       store.isVoting = true;
 
       store.selectCard(5);
@@ -172,6 +232,7 @@ describe('sessionStore', () => {
 
     it('selectCard does not work when not voting', () => {
       const store = useSessionStore();
+      store.createSession({ name: 'Test', emoji: '👤' });
       store.isVoting = false;
 
       store.selectCard(5);
@@ -181,6 +242,7 @@ describe('sessionStore', () => {
 
     it('selectCard auto-reveals when all voted', () => {
       const store = useSessionStore();
+      store.createSession({ name: 'Test', emoji: '👤' });
       store.isVoting = true;
 
       // Mark 4 participants as voted
@@ -199,6 +261,7 @@ describe('sessionStore', () => {
 
     it('startVoting resets state and starts timer', () => {
       const store = useSessionStore();
+      store.createSession({ name: 'Test', emoji: '👤' });
 
       // Set some initial state
       store.userCard = 5;
@@ -216,6 +279,7 @@ describe('sessionStore', () => {
 
     it('timer counts down correctly', () => {
       const store = useSessionStore();
+      store.createSession({ name: 'Test', emoji: '👤' });
 
       store.startVoting();
 
@@ -230,6 +294,7 @@ describe('sessionStore', () => {
 
     it('timer auto-reveals at 0', () => {
       const store = useSessionStore();
+      store.createSession({ name: 'Test', emoji: '👤' });
 
       store.startVoting();
 
@@ -244,6 +309,7 @@ describe('sessionStore', () => {
 
     it('revealCards updates state correctly', () => {
       const store = useSessionStore();
+      store.createSession({ name: 'Test', emoji: '👤' });
       store.isVoting = true;
 
       store.revealCards();
@@ -254,6 +320,7 @@ describe('sessionStore', () => {
 
     it('startNewRound increments round and resets', () => {
       const store = useSessionStore();
+      store.createSession({ name: 'Test', emoji: '👤' });
 
       expect(store.currentRound).toBe(1);
 
@@ -266,6 +333,7 @@ describe('sessionStore', () => {
 
     it('simulateParticipantVote updates participant', () => {
       const store = useSessionStore();
+      store.createSession({ name: 'Test', emoji: '👤' });
       store.isVoting = true;
 
       store.simulateParticipantVote(2, 5);
@@ -277,6 +345,7 @@ describe('sessionStore', () => {
 
     it('simulateParticipantVote does not update user', () => {
       const store = useSessionStore();
+      store.createSession({ name: 'Test', emoji: '👤' });
       store.isVoting = true;
 
       store.simulateParticipantVote(1, 5); // ID 1 is the user
@@ -288,6 +357,7 @@ describe('sessionStore', () => {
 
     it('stopTimer clears interval', () => {
       const store = useSessionStore();
+      store.createSession({ name: 'Test', emoji: '👤' });
 
       store.startVoting();
       store.stopTimer();

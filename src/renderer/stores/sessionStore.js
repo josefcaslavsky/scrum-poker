@@ -3,15 +3,15 @@ import { ref, computed } from 'vue';
 
 export const useSessionStore = defineStore('session', () => {
   // State
-  const sessionCode = ref('ABC123');
+  const sessionCode = ref(null);
   const currentRound = ref(1);
-  const participants = ref([
-    { id: 1, name: 'You', emoji: '👤', hasVoted: false, vote: null, isUser: true },
-    { id: 2, name: 'Alice', emoji: '👩', hasVoted: false, vote: null, isUser: false },
-    { id: 3, name: 'Bob', emoji: '👨', hasVoted: false, vote: null, isUser: false },
-    { id: 4, name: 'Charlie', emoji: '🧑', hasVoted: false, vote: null, isUser: false },
-    { id: 5, name: 'Diana', emoji: '👱‍♀️', hasVoted: false, vote: null, isUser: false }
-  ]);
+  const inSession = ref(false);
+  const currentUser = ref({
+    name: 'Anonymous',
+    emoji: '👤',
+    isFacilitator: false
+  });
+  const participants = ref([]);
   const userCard = ref(null);
   const timerSeconds = ref(15);
   const isRevealed = ref(false);
@@ -183,10 +183,84 @@ export const useSessionStore = defineStore('session', () => {
     }
   };
 
+  // Helper: Generate random session code
+  const generateSessionCode = () => {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  };
+
+  // Helper: Initialize participants with user
+  const initializeParticipants = () => {
+    participants.value = [
+      {
+        id: 1,
+        name: currentUser.value.name,
+        emoji: currentUser.value.emoji,
+        hasVoted: false,
+        vote: null,
+        isUser: true
+      },
+      { id: 2, name: 'Alice', emoji: '👩', hasVoted: false, vote: null, isUser: false },
+      { id: 3, name: 'Bob', emoji: '👨', hasVoted: false, vote: null, isUser: false },
+      { id: 4, name: 'Charlie', emoji: '🧑', hasVoted: false, vote: null, isUser: false },
+      { id: 5, name: 'Diana', emoji: '👱‍♀️', hasVoted: false, vote: null, isUser: false }
+    ];
+  };
+
+  // Create new session (user becomes facilitator)
+  const createSession = (userData) => {
+    currentUser.value = {
+      name: userData.name,
+      emoji: userData.emoji,
+      isFacilitator: true
+    };
+    sessionCode.value = generateSessionCode();
+    currentRound.value = 1;
+    inSession.value = true;
+    initializeParticipants();
+  };
+
+  // Join existing session
+  const joinSession = (sessionId, userData) => {
+    // TODO: In real implementation, this would validate session ID with backend
+    // For now, we'll simulate validation
+    if (!sessionId || sessionId.length < 3) {
+      throw new Error('Invalid session code');
+    }
+
+    currentUser.value = {
+      name: userData.name,
+      emoji: userData.emoji,
+      isFacilitator: false
+    };
+    sessionCode.value = sessionId.toUpperCase();
+    currentRound.value = 1;
+    inSession.value = true;
+    initializeParticipants();
+  };
+
+  // Leave session
+  const leaveSession = () => {
+    inSession.value = false;
+    sessionCode.value = null;
+    currentRound.value = 1;
+    participants.value = [];
+    userCard.value = null;
+    isRevealed.value = false;
+    isVoting.value = false;
+    stopTimer();
+  };
+
   return {
     // State
     sessionCode,
     currentRound,
+    inSession,
+    currentUser,
     participants,
     userCard,
     timerSeconds,
@@ -204,6 +278,9 @@ export const useSessionStore = defineStore('session', () => {
     mostVoted,
 
     // Actions
+    createSession,
+    joinSession,
+    leaveSession,
     selectCard,
     startVoting,
     startNewRound,

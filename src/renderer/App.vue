@@ -1,6 +1,21 @@
 <template>
   <div class="app">
-    <div class="container">
+    <!-- Profile Setup View (first time or editing profile) -->
+    <ProfileSetupPage
+      v-if="!store.inSession && showProfileSetup"
+      @profile-saved="handleProfileSaved"
+    />
+
+    <!-- Landing View (when not in session and profile exists) -->
+    <SessionLanding
+      v-else-if="!store.inSession"
+      @create-session="handleCreateSession"
+      @join-session="handleJoinSession"
+      @edit-profile="handleEditProfile"
+    />
+
+    <!-- Session View (when in session) -->
+    <div v-else class="container">
       <!-- Header -->
       <div class="header">
         <h1 class="title">
@@ -12,6 +27,18 @@
           :session-code="store.sessionCode"
           :current-round="store.currentRound"
         />
+        <button class="btn-leave" @click="handleLeaveSession">
+          Leave Session
+        </button>
+      </div>
+
+      <!-- Waiting State (when voting hasn't started) -->
+      <div v-if="!store.isVoting && !store.isRevealed" class="waiting-state">
+        <p class="waiting-message">
+          {{ store.currentUser.isFacilitator
+            ? 'Start the voting round when everyone is ready'
+            : 'Waiting for facilitator to start voting...' }}
+        </p>
       </div>
 
       <!-- Timer (shown only during voting) -->
@@ -49,8 +76,8 @@
       <!-- Participants -->
       <ParticipantList :participants="store.participants" />
 
-      <!-- Actions -->
-      <div class="actions">
+      <!-- Actions (only shown to facilitator) -->
+      <div v-if="store.currentUser.isFacilitator" class="actions">
         <button
           v-if="!store.isVoting && !store.isRevealed"
           class="btn btn-primary"
@@ -78,12 +105,15 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useSessionStore } from './stores/sessionStore';
 import { useMockApi } from './composables/useMockApi';
+import { getUserPreferences } from './composables/useLocalStorage';
 import confetti from 'canvas-confetti';
 
 // Import components
+import ProfileSetupPage from './components/ProfileSetupPage.vue';
+import SessionLanding from './components/SessionLanding.vue';
 import PokerCard from './components/PokerCard.vue';
 import VotingTimer from './components/VotingTimer.vue';
 import ParticipantList from './components/ParticipantList.vue';
@@ -92,6 +122,10 @@ import SessionInfo from './components/SessionInfo.vue';
 
 const store = useSessionStore();
 const mockApi = useMockApi();
+
+// Check if user has completed profile setup
+const hasProfile = localStorage.getItem('userPreferences') !== null;
+const showProfileSetup = ref(!hasProfile);
 
 const cards = [
   { value: 0, label: '0' },
@@ -106,6 +140,33 @@ const cards = [
   { value: -1, label: '?' },
   { value: -2, label: '☕' }
 ];
+
+const handleProfileSaved = () => {
+  showProfileSetup.value = false;
+};
+
+const handleEditProfile = () => {
+  showProfileSetup.value = true;
+};
+
+const handleCreateSession = (userData) => {
+  store.createSession(userData);
+};
+
+const handleJoinSession = ({ sessionId, name, emoji }) => {
+  try {
+    store.joinSession(sessionId, { name, emoji });
+  } catch (error) {
+    alert(error.message);
+  }
+};
+
+const handleLeaveSession = () => {
+  if (confirm('Are you sure you want to leave this session?')) {
+    store.leaveSession();
+    mockApi.cleanup();
+  }
+};
 
 const handleCardClick = (value) => {
   if (!store.isVoting || store.isRevealed) return;
@@ -151,3 +212,52 @@ onUnmounted(() => {
   clearInterval(checkRevealChange);
 });
 </script>
+
+<style scoped>
+.header {
+  position: relative;
+}
+
+.btn-leave {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.btn-leave:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.waiting-state {
+  padding: 2rem;
+  text-align: center;
+  animation: fadeIn 0.5s;
+}
+
+.waiting-message {
+  font-size: 1.25rem;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  margin: 2rem 0;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</style>

@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import {
   launchElectronApp,
   closeElectronApp,
+  setupAppForTesting,
   clickCard,
   getTimerValue
 } from './helpers.js';
@@ -13,6 +14,9 @@ test.describe('Timer E2E', () => {
     const app = await launchElectronApp();
     electronApp = app.electronApp;
     window = app.window;
+
+    // Complete onboarding and create session
+    await setupAppForTesting(window);
   });
 
   test.afterEach(async () => {

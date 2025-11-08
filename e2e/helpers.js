@@ -115,3 +115,56 @@ export async function getParticipantStats(window) {
 
   return { voted, total };
 }
+
+/**
+ * Complete profile setup (if shown)
+ */
+export async function completeProfileSetup(window, name = 'Test User', emoji = '🚀') {
+  // Check if profile setup page is visible
+  const profileSetupVisible = await window.locator('.profile-page').isVisible().catch(() => false);
+
+  if (profileSetupVisible) {
+    // Fill in name
+    await window.fill('#username', name);
+
+    // Select emoji (click the specific emoji button)
+    const emojiButtons = await window.locator('.emoji-btn');
+    const count = await emojiButtons.count();
+    for (let i = 0; i < count; i++) {
+      const btn = emojiButtons.nth(i);
+      const text = await btn.textContent();
+      if (text === emoji) {
+        await btn.click();
+        break;
+      }
+    }
+
+    // Click continue
+    await window.click('text=Continue');
+
+    // Wait for landing page to appear
+    await window.waitForSelector('.session-landing');
+  }
+}
+
+/**
+ * Create a new session from landing page
+ */
+export async function createSession(window) {
+  // Wait for landing page
+  await window.waitForSelector('.session-landing');
+
+  // Click Create Session button
+  await window.click('text=Create Session');
+
+  // Wait for session view to appear (check for Start Voting Round button)
+  await window.waitForSelector('text=Start Voting Round', { timeout: 5000 });
+}
+
+/**
+ * Setup app for testing (complete onboarding and create session)
+ */
+export async function setupAppForTesting(window, userName = 'Test User', userEmoji = '🚀') {
+  await completeProfileSetup(window, userName, userEmoji);
+  await createSession(window);
+}

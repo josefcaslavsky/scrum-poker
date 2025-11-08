@@ -1,11 +1,18 @@
 <template>
   <div class="session-info">
-    <span class="session-code">Session: {{ sessionCode }}</span>
+    <div class="session-code-wrapper">
+      <span class="session-code">Session: {{ sessionCode }}</span>
+      <button class="copy-btn" @click="copySessionCode" :title="copyTooltip">
+        {{ copyButtonText }}
+      </button>
+    </div>
     <span class="round-info">Round {{ currentRound }}</span>
   </div>
 </template>
 
 <script setup>
+import { ref } from 'vue';
+
 const props = defineProps({
   sessionCode: {
     type: String,
@@ -16,6 +23,23 @@ const props = defineProps({
     required: true
   }
 });
+
+const copyButtonText = ref('📋');
+const copyTooltip = ref('Copy session code');
+
+const copySessionCode = async () => {
+  try {
+    await navigator.clipboard.writeText(props.sessionCode);
+    copyButtonText.value = '✓';
+    copyTooltip.value = 'Copied!';
+    setTimeout(() => {
+      copyButtonText.value = '📋';
+      copyTooltip.value = 'Copy session code';
+    }, 2000);
+  } catch (err) {
+    console.error('Failed to copy:', err);
+  }
+};
 </script>
 
 <style scoped>
@@ -28,11 +52,37 @@ const props = defineProps({
   color: rgba(255, 255, 255, 0.8);
 }
 
-.session-code,
+.session-code-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 5px 15px;
+  border-radius: 15px;
+}
+
+.session-code {
+  font-weight: 600;
+}
+
 .round-info {
   background: rgba(255, 255, 255, 0.2);
   padding: 5px 15px;
   border-radius: 15px;
   font-weight: 600;
+}
+
+.copy-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.1em;
+  padding: 0;
+  opacity: 0.8;
+  transition: opacity 0.2s;
+}
+
+.copy-btn:hover {
+  opacity: 1;
 }
 </style>

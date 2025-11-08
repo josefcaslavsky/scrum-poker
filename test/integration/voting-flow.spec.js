@@ -17,6 +17,9 @@ describe('Voting Flow Integration', () => {
     const store = useSessionStore();
     const mockApi = useMockApi();
 
+    // Create session first
+    store.createSession({ name: 'Test', emoji: '👤' });
+
     // Start voting round
     mockApi.startVotingRound();
 
@@ -49,6 +52,9 @@ describe('Voting Flow Integration', () => {
   it('auto-reveals when timer expires', () => {
     const store = useSessionStore();
 
+    // Create session first
+    store.createSession({ name: 'Test', emoji: '👤' });
+
     // Start voting WITHOUT mock API so AI doesn't vote
     store.startVoting();
 
@@ -69,6 +75,9 @@ describe('Voting Flow Integration', () => {
   it('can force reveal before timer expires', () => {
     const store = useSessionStore();
     const mockApi = useMockApi();
+
+    // Create session first
+    store.createSession({ name: 'Test', emoji: '👤' });
 
     mockApi.startVotingRound();
 
@@ -93,6 +102,9 @@ describe('Voting Flow Integration', () => {
   it('can start multiple rounds', () => {
     const store = useSessionStore();
     const mockApi = useMockApi();
+
+    // Create session first
+    store.createSession({ name: 'Test', emoji: '👤' });
 
     // Round 1
     expect(store.currentRound).toBe(1);
@@ -124,6 +136,9 @@ describe('Voting Flow Integration', () => {
     const store = useSessionStore();
     const mockApi = useMockApi();
 
+    // Create session first
+    store.createSession({ name: 'Test', emoji: '👤' });
+
     // Round 1
     mockApi.startVotingRound();
     store.selectCard(3);
@@ -145,6 +160,9 @@ describe('Voting Flow Integration', () => {
   it('calculates statistics correctly after reveal', () => {
     const store = useSessionStore();
     const mockApi = useMockApi();
+
+    // Create session first
+    store.createSession({ name: 'Test', emoji: '👤' });
 
     mockApi.startVotingRound();
 
@@ -180,6 +198,9 @@ describe('Voting Flow Integration', () => {
     const store = useSessionStore();
     const mockApi = useMockApi();
 
+    // Create session first
+    store.createSession({ name: 'Test', emoji: '👤' });
+
     mockApi.startVotingRound();
 
     // Set votes with special values
@@ -206,6 +227,9 @@ describe('Voting Flow Integration', () => {
   it('stops timers on cleanup', () => {
     const store = useSessionStore();
     const mockApi = useMockApi();
+
+    // Create session first
+    store.createSession({ name: 'Test', emoji: '👤' });
 
     mockApi.startVotingRound();
 

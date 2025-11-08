@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import {
   launchElectronApp,
   closeElectronApp,
+  setupAppForTesting,
   clickCard,
   getVotingStatus,
   getParticipantStats
@@ -14,13 +15,16 @@ test.describe('Voting Flow E2E', () => {
     const app = await launchElectronApp();
     electronApp = app.electronApp;
     window = app.window;
+
+    // Complete onboarding and create session
+    await setupAppForTesting(window);
   });
 
   test.afterEach(async () => {
     await closeElectronApp(electronApp);
   });
 
-  test('app launches and shows initial state', async () => {
+  test('app launches and shows session state after setup', async () => {
     // Check title
     const title = await window.title();
     expect(title).toBe('Scrum Poker');
@@ -29,15 +33,15 @@ test.describe('Voting Flow E2E', () => {
     const header = await window.locator('.title').textContent();
     expect(header).toContain('Scrum Poker');
 
-    // Check session info
-    const sessionCode = await window.locator('.session-code').textContent();
-    expect(sessionCode).toContain('ABC123');
+    // Check session code is displayed (should be 6 characters)
+    const sessionCodeText = await window.locator('.session-code').textContent();
+    expect(sessionCodeText).toMatch(/Session: [A-Z0-9]{6}/);
 
     // Check round info
     const roundInfo = await window.locator('.round-info').textContent();
     expect(roundInfo).toContain('Round 1');
 
-    // Check Start button is visible
+    // Check Start button is visible (user is facilitator)
     const startButton = await window.locator('text=Start Voting Round');
     expect(await startButton.isVisible()).toBe(true);
 
