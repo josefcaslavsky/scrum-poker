@@ -1,8 +1,14 @@
 <template>
   <div class="app">
+    <!-- Loading State (when rejoining session) -->
+    <div v-if="isRejoining" class="loading-container">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">Reconnecting to session...</p>
+    </div>
+
     <!-- Profile Setup View (first time or editing profile) -->
     <ProfileSetupPage
-      v-if="!store.inSession && showProfileSetup"
+      v-else-if="!store.inSession && showProfileSetup"
       @profile-saved="handleProfileSaved"
     />
 
@@ -108,7 +114,7 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { useSessionStore } from './stores/sessionStore';
 import { useMockApi } from './composables/useMockApi';
-import { getUserPreferences } from './composables/useLocalStorage';
+import { getUserPreferences, getSessionInfo, clearSessionInfo } from './composables/useLocalStorage';
 import confetti from 'canvas-confetti';
 
 // Import components
@@ -126,6 +132,7 @@ const mockApi = useMockApi();
 // Check if user has completed profile setup
 const hasProfile = localStorage.getItem('userPreferences') !== null;
 const showProfileSetup = ref(!hasProfile);
+const isRejoining = ref(false);
 
 const cards = [
   { value: 0, label: '0' },
@@ -149,15 +156,21 @@ const handleEditProfile = () => {
   showProfileSetup.value = true;
 };
 
-const handleCreateSession = (userData) => {
-  store.createSession(userData);
+const handleCreateSession = async (userData) => {
+  try {
+    await store.createSession(userData);
+  } catch (error) {
+    console.error('Failed to create session:', error);
+    alert('Failed to create session. Please try again.');
+  }
 };
 
-const handleJoinSession = ({ sessionId, name, emoji }) => {
+const handleJoinSession = async ({ sessionId, name, emoji }) => {
   try {
-    store.joinSession(sessionId, { name, emoji });
+    await store.joinSession(sessionId, { name, emoji });
   } catch (error) {
-    alert(error.message);
+    console.error('Failed to join session:', error);
+    alert(error.message || 'Failed to join session. Please try again.');
   }
 };
 
@@ -173,17 +186,17 @@ const handleCardClick = (value) => {
   store.selectCard(value);
 };
 
-const handleStartVoting = () => {
-  mockApi.startVotingRound();
+const handleStartVoting = async () => {
+  await store.startVoting();
 };
 
-const handleForceReveal = () => {
-  mockApi.forceReveal();
+const handleForceReveal = async () => {
+  await store.revealCards();
   triggerConfetti();
 };
 
-const handleNewRound = () => {
-  mockApi.startNewRound();
+const handleNewRound = async () => {
+  await store.startNewRound();
 };
 
 const triggerConfetti = () => {
@@ -203,8 +216,29 @@ const checkRevealChange = setInterval(() => {
   previousRevealed = store.isRevealed;
 }, 100);
 
-onMounted(() => {
-  // App is ready
+onMounted(async () => {
+  // Check for saved session and attempt to rejoin
+  const savedSession = getSessionInfo();
+
+  if (savedSession && !store.inSession) {
+    console.log('[App] Found saved session, attempting to rejoin:', savedSession);
+    isRejoining.value = true;
+
+    try {
+      await store.rejoinSession(savedSession);
+      console.log('[App] Successfully rejoined session');
+    } catch (error) {
+      console.error('[App] Failed to rejoin session:', error);
+      // Clear invalid session info
+      clearSessionInfo();
+      // Show appropriate view based on profile status
+      if (!hasProfile) {
+        showProfileSetup.value = true;
+      }
+    } finally {
+      isRejoining.value = false;
+    }
+  }
 });
 
 onUnmounted(() => {
@@ -214,6 +248,36 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 2rem;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top: 4px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-text {
+  margin-top: 1.5rem;
+  font-size: 1.2rem;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 .header {
   position: relative;
 }

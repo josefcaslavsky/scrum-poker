@@ -39,3 +39,30 @@ export function getUserPreferences() {
 export function saveUserPreferences(preferences) {
   localStorage.setItem('userPreferences', JSON.stringify(preferences))
 }
+
+/**
+ * Get saved session info from localStorage
+ */
+export function getSessionInfo() {
+  const storedSession = localStorage.getItem('sessionInfo')
+  return storedSession ? JSON.parse(storedSession) : null
+}
+
+/**
+ * Save session info to localStorage
+ */
+export function saveSessionInfo(sessionCode, participantId, isFacilitator) {
+  const sessionInfo = {
+    sessionCode,
+    participantId,
+    isFacilitator
+  }
+  localStorage.setItem('sessionInfo', JSON.stringify(sessionInfo))
+}
+
+/**
+ * Clear session info from localStorage
+ */
+export function clearSessionInfo() {
+  localStorage.removeItem('sessionInfo')
+}

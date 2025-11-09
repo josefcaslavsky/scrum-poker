@@ -47,8 +47,11 @@
     "vitest": "^4.0.8"
   },
   "dependencies": {
+    "axios": "^1.13.2",
     "canvas-confetti": "^1.9.4",
+    "laravel-echo": "^2.2.6",
     "pinia": "^3.0.4",
+    "pusher-js": "^8.4.0",
     "vue": "^3.5.24",
     "vue-router": "^4.6.3"
   },
@@ -69,11 +72,17 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         },
         {
           "target": "zip",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ],
       "category": "public.app-category.developer-tools",
@@ -107,11 +116,16 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64", "ia32"]
+          "arch": [
+            "x64",
+            "ia32"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "resources/icon.ico",
@@ -127,7 +141,10 @@
       "shortcutName": "Scrum Poker"
     },
     "linux": {
-      "target": ["AppImage", "deb"],
+      "target": [
+        "AppImage",
+        "deb"
+      ],
       "category": "Development",
       "icon": "resources/icons"
     }
