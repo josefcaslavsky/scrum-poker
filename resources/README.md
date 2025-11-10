@@ -56,29 +56,47 @@ Consider including:
 
 ## Current Status
 
-⚠️ **Icons not yet created** - Using default Electron icon
+✅ **SVG source icon created** - `icon.svg` available
 
-The application will build successfully without icons, but will use the default Electron icon. For production releases, custom icons are strongly recommended.
+The SVG source icon has been created with a Scrum Poker theme (playing card with Fibonacci number 8). You need to convert this to platform-specific formats (icns, ico) before building for distribution.
 
 ## Creating Icons
 
-### Quick Start (Free Tools)
+### Quick Start (Online Conversion - Easiest)
 
-1. **Design the icon** (Canva, Figma, or any graphics editor)
-   - Create 1024x1024px canvas
-   - Use blue gradient theme
-   - Add playing card or poker elements
-   - Export as PNG with transparency
+1. **Convert SVG to PNG first**
+   - Upload `icon.svg` to https://cloudconvert.com/svg-to-png
+   - Set size to 1024x1024px
+   - Download the PNG
 
-2. **Convert to platform formats**
-   - macOS: https://cloudconvert.com/png-to-icns
-   - Windows: https://cloudconvert.com/png-to-ico
-   - Save files in this directory
+2. **Convert PNG to platform formats**
+   - macOS: https://cloudconvert.com/png-to-icns (use 1024x1024 PNG)
+   - Windows: https://cloudconvert.com/png-to-ico (use 1024x1024 PNG)
+   - Save files as `icon.icns` and `icon.ico` in this directory
 
 3. **Test the build**
    ```bash
    npm run build:mac  # or build:win
    ```
+
+### Alternative: Command Line (Automated)
+
+If you have `librsvg` and `imagemagick` installed:
+
+```bash
+cd resources
+./generate-icons.sh
+```
+
+**Install dependencies (macOS):**
+```bash
+brew install librsvg imagemagick
+```
+
+**Install dependencies (Linux):**
+```bash
+sudo apt-get install librsvg2-bin imagemagick
+```
 
 ### Example Icon Concept
 
