@@ -38,7 +38,7 @@
         </button>
       </div>
 
-      <!-- Waiting State (when voting hasn't started) -->
+      <!-- Waiting State (only when truly waiting for round to start) -->
       <div v-if="!store.isVoting && !store.isRevealed" class="waiting-state">
         <p class="waiting-message">
           {{ store.currentUser.isFacilitator
@@ -58,7 +58,7 @@
       />
 
       <!-- Card Grid -->
-      <div v-if="!store.isRevealed" class="card-grid">
+      <div v-if="!store.isRevealed && store.isVoting" class="card-grid">
         <PokerCard
           v-for="card in cards"
           :key="card.value"

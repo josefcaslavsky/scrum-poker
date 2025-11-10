@@ -2,40 +2,51 @@
   <div class="results-section">
     <h2 class="results-title">Results 🎯</h2>
 
-    <div class="results-cards">
-      <div
-        v-for="participant in participants"
-        :key="participant.id"
-        class="result-card"
-      >
-        <div class="result-participant">
-          <span class="result-emoji">{{ participant.emoji }}</span>
-          <span class="result-name">{{ participant.name }}</span>
-        </div>
-        <div class="result-vote">
-          {{ getCardLabel(participant.vote) }}
-        </div>
-      </div>
+    <!-- Show message when no vote data available (late join scenario) -->
+    <div v-if="!hasVoteData" class="no-results-message">
+      <p>Previous round results are not available.</p>
+      <p class="sub-message">Waiting for the next round to start...</p>
     </div>
 
-    <div class="results-stats">
-      <div class="stat-card">
-        <div class="stat-label">Average</div>
-        <div class="stat-value">{{ averageVote || 'N/A' }}</div>
+    <!-- Show results when vote data is available -->
+    <template v-else>
+      <div class="results-cards">
+        <div
+          v-for="participant in participants"
+          :key="participant.id"
+          class="result-card"
+        >
+          <div class="result-participant">
+            <span class="result-emoji">{{ participant.emoji }}</span>
+            <span class="result-name">{{ participant.name }}</span>
+          </div>
+          <div class="result-vote">
+            {{ getCardLabel(participant.vote) }}
+          </div>
+        </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Consensus</div>
-        <div class="stat-value">{{ consensus }}</div>
+
+      <div class="results-stats">
+        <div class="stat-card">
+          <div class="stat-label">Average</div>
+          <div class="stat-value">{{ averageVote || 'N/A' }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Consensus</div>
+          <div class="stat-value">{{ consensus }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Most Voted</div>
+          <div class="stat-value">{{ getCardLabel(mostVoted) }}</div>
+        </div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Most Voted</div>
-        <div class="stat-value">{{ getCardLabel(mostVoted) }}</div>
-      </div>
-    </div>
+    </template>
   </div>
 </template>
 
 <script setup>
+import { computed } from 'vue';
+
 const props = defineProps({
   participants: {
     type: Array,
@@ -53,6 +64,11 @@ const props = defineProps({
     type: Number,
     default: null
   }
+});
+
+// Compute hasVoteData locally based on participants
+const hasVoteData = computed(() => {
+  return props.participants.some(p => p.vote !== null);
 });
 
 const cards = [
@@ -88,6 +104,28 @@ const getCardLabel = (value) => {
   font-size: 2.5em;
   margin-bottom: 30px;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.no-results-message {
+  text-align: center;
+  padding: 3rem 2rem;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  margin: 2rem auto;
+  max-width: 600px;
+}
+
+.no-results-message p {
+  font-size: 1.5em;
+  color: #333;
+  margin: 0.5rem 0;
+}
+
+.no-results-message .sub-message {
+  font-size: 1.2em;
+  color: #666;
+  margin-top: 1rem;
 }
 
 .results-cards {

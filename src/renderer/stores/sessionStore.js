@@ -109,6 +109,11 @@ export const useSessionStore = defineStore('session', () => {
     return mostCommon;
   });
 
+  // Check if we have actual vote data to display
+  const hasVoteData = computed(() => {
+    return participants.value.some(p => p.vote !== null);
+  });
+
   // Actions
   // Convert numeric card values to API format
   const convertCardValue = (value) => {
@@ -648,6 +653,7 @@ export const useSessionStore = defineStore('session', () => {
     averageVote,
     consensus,
     mostVoted,
+    hasVoteData,
 
     // Actions
     createSession,
