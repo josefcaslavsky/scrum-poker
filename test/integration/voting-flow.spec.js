@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
-import { useSessionStore } from '../../src/renderer/stores/sessionStore';
-import { useMockApi } from '../../src/renderer/composables/useMockApi';
+import { useSessionStore } from '../../src/stores/sessionStore';
+import { useMockApi } from '../../src/composables/useMockApi';
 
 describe('Voting Flow Integration', () => {
   beforeEach(() => {

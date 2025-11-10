@@ -8,7 +8,7 @@ export default defineConfig({
     globals: true,
     environment: 'happy-dom',
     setupFiles: ['./test/setup.js'],
-    exclude: ['**/node_modules/**', '**/dist/**', '**/e2e/**'],
+    exclude: ['**/node_modules/**', '**/dist/**', '**/dist-web/**', '**/out/**', '**/e2e/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
@@ -17,8 +17,8 @@ export default defineConfig({
         'test/',
         '**/*.spec.js',
         '**/*.test.js',
-        'src/main/',
-        'src/preload/',
+        'electron/',
+        'web/',
         'electron.vite.config.js',
         'vitest.config.js'
       ]
@@ -26,7 +26,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src/renderer')
+      '@': resolve(__dirname, 'src')
     }
   }
 });
