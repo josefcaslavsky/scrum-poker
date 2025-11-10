@@ -85,4 +85,37 @@ const copySessionCode = async () => {
 .copy-btn:hover {
   opacity: 1;
 }
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .session-info {
+    gap: 15px;
+    font-size: 0.85em;
+    flex-wrap: wrap;
+  }
+
+  .session-code-wrapper,
+  .round-info {
+    padding: 4px 12px;
+    font-size: 0.95em;
+  }
+}
+
+@media (max-width: 480px) {
+  .session-info {
+    gap: 10px;
+    font-size: 0.8em;
+    margin-top: 12px;
+  }
+
+  .session-code-wrapper,
+  .round-info {
+    padding: 4px 10px;
+    font-size: 0.9em;
+  }
+
+  .copy-btn {
+    font-size: 1em;
+  }
+}
 </style>

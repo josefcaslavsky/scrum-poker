@@ -24,6 +24,14 @@
     <div v-else class="container">
       <!-- Header -->
       <div class="header">
+        <button class="btn-leave" @click="handleLeaveSession" title="Leave Session">
+          <span class="leave-text">Leave Session</span>
+          <svg class="leave-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+        </button>
         <h1 class="title">
           <span class="emoji">🃏</span>
           Scrum Poker
@@ -33,9 +41,6 @@
           :session-code="store.sessionCode"
           :current-round="store.currentRound"
         />
-        <button class="btn-leave" @click="handleLeaveSession">
-          Leave Session
-        </button>
       </div>
 
       <!-- Waiting State (only when truly waiting for round to start) -->
@@ -280,25 +285,40 @@ onUnmounted(() => {
 
 .header {
   position: relative;
+  text-align: center;
 }
 
 .btn-leave {
   position: absolute;
-  top: 1rem;
-  right: 1rem;
+  top: 0;
+  right: 0;
   padding: 0.5rem 1rem;
   background: rgba(255, 255, 255, 0.2);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.3s;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .btn-leave:hover {
   background: rgba(255, 255, 255, 0.3);
   border-color: rgba(255, 255, 255, 0.5);
+}
+
+.leave-icon {
+  display: none;
+  width: 18px;
+  height: 18px;
+}
+
+.leave-text {
+  display: inline;
 }
 
 .waiting-state {
@@ -322,6 +342,68 @@ onUnmounted(() => {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .btn-leave {
+    padding: 0.5rem;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    justify-content: center;
+  }
+
+  .leave-text {
+    display: none;
+  }
+
+  .leave-icon {
+    display: block;
+    width: 18px;
+    height: 18px;
+  }
+
+  .waiting-message {
+    font-size: 1.1rem;
+    margin: 1.5rem 0;
+  }
+
+  .loading-text {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .btn-leave {
+    padding: 0.4rem;
+    width: 32px;
+    height: 32px;
+  }
+
+  .leave-icon {
+    width: 16px;
+    height: 16px;
+  }
+
+  .waiting-state {
+    padding: 1.5rem 1rem;
+  }
+
+  .waiting-message {
+    font-size: 1rem;
+    margin: 1rem 0;
+  }
+
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+  }
+
+  .loading-text {
+    font-size: 0.9rem;
+    margin-top: 1rem;
   }
 }
 </style>

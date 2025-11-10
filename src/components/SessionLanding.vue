@@ -103,7 +103,7 @@ function joinSession() {
 }
 
 .app-title {
-  font-size: 3rem;
+  font-size: 3.5rem;
   font-weight: 700;
   color: white;
   text-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
@@ -188,6 +188,7 @@ function joinSession() {
 .divider {
   display: flex;
   align-items: center;
+  justify-content: center;
   color: white;
   font-weight: 600;
   font-size: 1.2rem;
@@ -257,16 +258,124 @@ function joinSession() {
 }
 
 @media (max-width: 768px) {
+  .session-landing {
+    padding: 1rem 1rem;
+    gap: 1.25rem;
+    min-height: 100vh;
+    justify-content: flex-start;
+    padding-top: 2rem;
+  }
+
   .app-title {
-    font-size: 2rem;
+    font-size: 2.5rem;
+    margin-bottom: 0;
+  }
+
+  .user-info {
+    padding: 0.75rem 1.25rem;
+    gap: 0.75rem;
+  }
+
+  .user-avatar {
+    font-size: 1.5rem;
+  }
+
+  .user-name {
+    font-size: 1rem;
+  }
+
+  .btn-edit-profile {
+    width: 32px;
+    height: 32px;
+    font-size: 1rem;
   }
 
   .session-actions {
     flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    padding: 0;
+  }
+
+  .action-card {
+    min-width: 100%;
+    max-width: 100%;
+    padding: 1.5rem;
+    gap: 0.875rem;
+  }
+
+  .action-card h3 {
+    font-size: 1.25rem;
+  }
+
+  .action-card p {
+    font-size: 0.85rem;
   }
 
   .divider {
-    transform: rotate(90deg);
+    width: 100%;
+    font-size: 1rem;
+    margin: 0;
+    text-align: center;
+  }
+
+  .btn {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .session-landing {
+    padding: 0.75rem 0.75rem;
+    gap: 1rem;
+    padding-top: 1.5rem;
+  }
+
+  .app-title {
+    font-size: 2rem;
+  }
+
+  .user-info {
+    padding: 0.625rem 1rem;
+    gap: 0.625rem;
+  }
+
+  .user-avatar {
+    font-size: 1.25rem;
+  }
+
+  .user-name {
+    font-size: 0.9rem;
+  }
+
+  .action-card {
+    padding: 1.25rem;
+    gap: 0.75rem;
+  }
+
+  .action-card h3 {
+    font-size: 1.125rem;
+  }
+
+  .action-card p {
+    font-size: 0.8rem;
+    line-height: 1.4;
+  }
+
+  .join-form input {
+    font-size: 0.9rem;
+    padding: 0.625rem 0.875rem;
+  }
+
+  .btn {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.9rem;
+  }
+
+  .divider {
+    font-size: 0.9rem;
+    text-align: center;
   }
 }
 </style>
