@@ -154,3 +154,11 @@ dist/
 *.AppImage
 *.deb
 *.snap
+
+# Web build output
+dist-web/
+
+# Ionic/Capacitor build output
+dist-ionic/
+ios/
+android/
