@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { sessionApi } from '../services/api';
+import authService from '../services/auth';
 import { subscribeToSession, unsubscribeFromSession } from '../services/broadcasting';
 import { saveSessionInfo, clearSessionInfo } from '../composables/useLocalStorage';
 
@@ -136,9 +137,8 @@ export const useSessionStore = defineStore('session', () => {
     if (isRevealed.value || !isVoting.value) return;
 
     try {
-      // Submit vote to API
+      // Submit vote to API (participant_id is inferred from auth token)
       await sessionApi.vote(sessionCode.value, {
-        participant_id: currentUser.value.id,
         card_value: convertCardValue(value)
       });
 
@@ -275,27 +275,21 @@ export const useSessionStore = defineStore('session', () => {
 
   // Helper: Setup WebSocket subscriptions
   const setupWebSocket = () => {
-    console.log('[SessionStore] Setting up WebSocket for session:', sessionCode.value);
     wsChannel.value = subscribeToSession(sessionCode.value, {
       onParticipantJoined: (event) => {
-        console.log('[SessionStore] Participant joined handler called:', event);
         // Add new participant to list
         const existingIndex = participants.value.findIndex(p => p.id === event.participant.id);
         if (existingIndex === -1) {
-          console.log('[SessionStore] Adding new participant to list:', event.participant);
           participants.value.push({
             ...event.participant,
             hasVoted: false,
             vote: null,
             isUser: event.participant.id === currentUser.value.id
           });
-        } else {
-          console.log('[SessionStore] Participant already in list, skipping');
         }
       },
 
       onParticipantLeft: (event) => {
-        console.log('Participant left:', event);
         // Remove participant from list
         const index = participants.value.findIndex(p => p.id === event.participant_id);
         if (index !== -1) {
@@ -303,8 +297,7 @@ export const useSessionStore = defineStore('session', () => {
         }
       },
 
-      onVotingStarted: (event) => {
-        console.log('Voting started:', event);
+      onVotingStarted: () => {
         isVoting.value = true;
         isRevealed.value = false;
         userCard.value = null;
@@ -319,7 +312,6 @@ export const useSessionStore = defineStore('session', () => {
       },
 
       onVoteSubmitted: (event) => {
-        console.log('Vote submitted:', event);
         // Update participant vote status
         const participant = participants.value.find(p => p.id === event.participant_id);
         if (participant) {
@@ -329,7 +321,6 @@ export const useSessionStore = defineStore('session', () => {
       },
 
       onVotesRevealed: (event) => {
-        console.log('[SessionStore] Votes revealed:', event);
         isRevealed.value = true;
         isVoting.value = false;
         stopTimer();
@@ -342,14 +333,12 @@ export const useSessionStore = defineStore('session', () => {
               // Convert API string value to numeric format
               participant.vote = convertCardValueFromApi(vote.card_value);
               participant.hasVoted = true;
-              console.log('[SessionStore] Updated participant vote:', participant.name, participant.vote);
             }
           });
         }
       },
 
       onNewRound: (event) => {
-        console.log('New round started:', event);
         currentRound.value = event.round;
         isVoting.value = true;
         isRevealed.value = false;
@@ -364,8 +353,7 @@ export const useSessionStore = defineStore('session', () => {
         startTimer();
       },
 
-      onSessionEnded: (event) => {
-        console.log('[SessionStore] Session ended - host left:', event);
+      onSessionEnded: () => {
 
         // Unsubscribe from WebSocket
         if (sessionCode.value) {
@@ -402,19 +390,20 @@ export const useSessionStore = defineStore('session', () => {
   const createSession = async (userData) => {
     try {
       const response = await sessionApi.create({
-        name: userData.name,
-        emoji: userData.emoji,
         host_name: userData.name,
         host_emoji: userData.emoji
       });
 
-      const session = response.data;
+      const { session, participant, token } = response.data;
+
+      // Store authentication token
+      authService.setToken(token);
 
       currentUser.value = {
-        id: session.participant_id,
-        name: userData.name,
-        emoji: userData.emoji,
-        isFacilitator: true
+        id: participant.id,
+        name: participant.name,
+        emoji: participant.emoji,
+        isFacilitator: participant.is_host
       };
 
       sessionCode.value = session.code;
@@ -424,21 +413,21 @@ export const useSessionStore = defineStore('session', () => {
       // Initialize participants with just the current user for now
       // More participants will be added via WebSocket when they join
       participants.value = [{
-        id: session.participant_id,
-        name: userData.name,
-        emoji: userData.emoji,
+        id: participant.id,
+        name: participant.name,
+        emoji: participant.emoji,
         hasVoted: false,
         vote: null,
         isUser: true
       }];
 
       // Save session info to localStorage
-      saveSessionInfo(session.code, session.participant_id, true);
+      saveSessionInfo(session.code, participant.id, participant.is_host);
 
       // Setup WebSocket connection
       setupWebSocket();
 
-      return session;
+      return { session, participant };
     } catch (error) {
       console.error('Failed to create session:', error);
 
@@ -462,28 +451,30 @@ export const useSessionStore = defineStore('session', () => {
         emoji: userData.emoji
       });
 
-      const session = response.data;
+      const { session, participant, participants: allParticipants, token } = response.data;
+
+      // Store authentication token
+      authService.setToken(token);
 
       currentUser.value = {
-        id: session.participant_id,
-        name: userData.name,
-        emoji: userData.emoji,
-        isFacilitator: false
+        id: participant.id,
+        name: participant.name,
+        emoji: participant.emoji,
+        isFacilitator: participant.is_host
       };
 
-      // Use the sessionId parameter since API doesn't return code
-      sessionCode.value = sessionId;
+      sessionCode.value = session.code;
       currentRound.value = session.current_round || 1;
       inSession.value = true;
 
       // Initialize participants from API response
-      participants.value = session.participants.map(p => ({
+      participants.value = allParticipants.map(p => ({
         id: p.id,
         name: p.name,
         emoji: p.emoji,
         hasVoted: false,
         vote: null,
-        isUser: p.id === session.participant_id
+        isUser: p.id === participant.id
       }));
 
       // Sync voting state from session
@@ -495,12 +486,12 @@ export const useSessionStore = defineStore('session', () => {
       }
 
       // Save session info to localStorage
-      saveSessionInfo(sessionId, session.participant_id, false);
+      saveSessionInfo(session.code, participant.id, participant.is_host);
 
       // Setup WebSocket connection
       setupWebSocket();
 
-      return session;
+      return { session, participant };
     } catch (error) {
       console.error('Failed to join session:', error);
       throw error;
@@ -510,13 +501,9 @@ export const useSessionStore = defineStore('session', () => {
   // Rejoin existing session (from localStorage)
   const rejoinSession = async (savedSessionInfo) => {
     try {
-      console.log('[SessionStore] Attempting to rejoin session:', savedSessionInfo.sessionCode);
-
       // Get current session state from API
       const response = await sessionApi.get(savedSessionInfo.sessionCode);
       const session = response.data;
-
-      console.log('[SessionStore] Session retrieved:', session);
 
       // Verify participant still exists in session
       const participantExists = session.participants.some(p => p.id === savedSessionInfo.participantId);
@@ -573,7 +560,6 @@ export const useSessionStore = defineStore('session', () => {
       // Setup WebSocket connection
       setupWebSocket();
 
-      console.log('[SessionStore] Successfully rejoined session');
       return session;
     } catch (error) {
       console.error('[SessionStore] Failed to rejoin session:', error);
@@ -584,11 +570,8 @@ export const useSessionStore = defineStore('session', () => {
   // Leave session
   const leaveSession = async () => {
     try {
-      if (sessionCode.value && currentUser.value.id) {
-        console.log('[SessionStore] Leaving session:', sessionCode.value, 'participant:', currentUser.value.id);
-        const response = await sessionApi.leave(sessionCode.value, currentUser.value.id);
-        console.log('[SessionStore] Leave response:', response.data);
-
+      if (sessionCode.value) {
+        await sessionApi.leave(sessionCode.value);
         // Note: WebSocket will broadcast ParticipantLeft or SessionEnded event to other users
         // If host leaves, backend will broadcast SessionEnded to all participants
       }
@@ -598,6 +581,9 @@ export const useSessionStore = defineStore('session', () => {
         unsubscribeFromSession(sessionCode.value);
       }
       wsChannel.value = null;
+
+      // Clear authentication token
+      authService.clearToken();
 
       // Clear session info from localStorage
       clearSessionInfo();
@@ -620,6 +606,7 @@ export const useSessionStore = defineStore('session', () => {
     } catch (error) {
       console.error('[SessionStore] Failed to leave session:', error);
       // Still reset local state even if API call fails
+      authService.clearToken();
       clearSessionInfo();
       inSession.value = false;
       sessionCode.value = null;

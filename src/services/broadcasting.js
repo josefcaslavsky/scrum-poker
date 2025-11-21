@@ -5,9 +5,14 @@ import Pusher from 'pusher-js'
 window.Pusher = Pusher
 
 // Broadcasting configuration
-const WEBSOCKET_HOST = 'localhost'
-const WEBSOCKET_PORT = 8081
-const APP_KEY = '3xmj8ojoufvlr6xuiaka'
+const WEBSOCKET_HOST = import.meta.env.VITE_REVERB_HOST
+const WEBSOCKET_PORT = import.meta.env.VITE_REVERB_PORT
+const APP_KEY = import.meta.env.VITE_REVERB_APP_KEY
+const SCHEME = import.meta.env.VITE_REVERB_SCHEME || 'https'
+
+if (!WEBSOCKET_HOST || !WEBSOCKET_PORT || !APP_KEY) {
+  console.error('Missing required environment variables: VITE_REVERB_HOST, VITE_REVERB_PORT, and/or VITE_REVERB_APP_KEY')
+}
 
 /**
  * Initialize Laravel Echo instance
@@ -19,8 +24,7 @@ export function createEchoInstance() {
     wsHost: WEBSOCKET_HOST,
     wsPort: WEBSOCKET_PORT,
     wssPort: WEBSOCKET_PORT,
-    forceTLS: false,
-    encrypted: false,
+    forceTLS: SCHEME === 'https',
     disableStats: true,
     enabledTransports: ['ws', 'wss'],
     cluster: 'mt1' // Required by Pusher, but not used by Laravel WebSockets
@@ -49,14 +53,7 @@ export function subscribeToSession(sessionCode, callbacks = {}) {
   const echo = getEcho()
   const channelName = `session.${sessionCode}`
 
-  console.log('[WebSocket] Subscribing to channel:', channelName)
-
   const channel = echo.channel(channelName)
-
-  // Log channel subscription
-  channel.subscription.bind('pusher:subscription_succeeded', () => {
-    console.log('[WebSocket] Successfully subscribed to channel:', channelName)
-  })
 
   channel.subscription.bind('pusher:subscription_error', (error) => {
     console.error('[WebSocket] Subscription error:', error)
@@ -64,63 +61,49 @@ export function subscribeToSession(sessionCode, callbacks = {}) {
 
   // Participant joined
   if (callbacks.onParticipantJoined) {
-    console.log('[WebSocket] Registering ParticipantJoined listener')
     channel.listen('ParticipantJoined', (data) => {
-      console.log('[WebSocket] ParticipantJoined event received:', data)
       callbacks.onParticipantJoined(data)
     })
   }
 
   // Participant left
   if (callbacks.onParticipantLeft) {
-    console.log('[WebSocket] Registering ParticipantLeft listener')
     channel.listen('ParticipantLeft', (data) => {
-      console.log('[WebSocket] ParticipantLeft event received:', data)
       callbacks.onParticipantLeft(data)
     })
   }
 
   // Voting started
   if (callbacks.onVotingStarted) {
-    console.log('[WebSocket] Registering VotingStarted listener')
     channel.listen('VotingStarted', (data) => {
-      console.log('[WebSocket] VotingStarted event received:', data)
       callbacks.onVotingStarted(data)
     })
   }
 
   // Vote submitted
   if (callbacks.onVoteSubmitted) {
-    console.log('[WebSocket] Registering VoteSubmitted listener')
     channel.listen('VoteSubmitted', (data) => {
-      console.log('[WebSocket] VoteSubmitted event received:', data)
       callbacks.onVoteSubmitted(data)
     })
   }
 
   // Votes revealed
   if (callbacks.onVotesRevealed) {
-    console.log('[WebSocket] Registering CardsRevealed listener')
     channel.listen('CardsRevealed', (data) => {
-      console.log('[WebSocket] CardsRevealed event received:', data)
       callbacks.onVotesRevealed(data)
     })
   }
 
   // New round started
   if (callbacks.onNewRound) {
-    console.log('[WebSocket] Registering NextRoundStarted listener')
     channel.listen('NextRoundStarted', (data) => {
-      console.log('[WebSocket] NextRoundStarted event received:', data)
       callbacks.onNewRound(data)
     })
   }
 
   // Session ended (host left)
   if (callbacks.onSessionEnded) {
-    console.log('[WebSocket] Registering SessionEnded listener')
     channel.listen('SessionEnded', (data) => {
-      console.log('[WebSocket] SessionEnded event received:', data)
       callbacks.onSessionEnded(data)
     })
   }

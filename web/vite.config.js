@@ -5,6 +5,7 @@ import { resolve } from 'path';
 
 export default defineConfig({
   root: resolve(__dirname, '../src'),
+  envDir: resolve(__dirname, '..'),
   plugins: [
     vue(),
     VitePWA({
@@ -38,27 +39,7 @@ export default defineConfig({
         ]
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
-        runtimeCaching: [
-          {
-            urlPattern: /^http:\/\/localhost:8000\/api\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              expiration: {
-                maxEntries: 10,
-                maxAgeSeconds: 300 // 5 minutes
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          },
-          {
-            urlPattern: /^ws:\/\/localhost:8081\/.*/i,
-            handler: 'NetworkOnly'
-          }
-        ]
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}']
       }
     })
   ],

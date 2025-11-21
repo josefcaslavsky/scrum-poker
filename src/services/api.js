@@ -1,6 +1,12 @@
 import axios from 'axios'
+import authService from './auth'
 
-const API_BASE_URL = 'http://localhost:8000/api'
+const API_BASE_URL = import.meta.env.VITE_API_URL
+const API_KEY = import.meta.env.VITE_API_KEY
+
+if (!API_BASE_URL || !API_KEY) {
+  console.error('Missing required environment variables: VITE_API_URL and/or VITE_API_KEY')
+}
 
 // Create axios instance
 const apiClient = axios.create({
@@ -11,14 +17,25 @@ const apiClient = axios.create({
   }
 })
 
-// Add request interceptor for auth token if needed
+// Add request interceptor for auth
 apiClient.interceptors.request.use(
   (config) => {
-    // You can add auth token here if needed
-    // const token = localStorage.getItem('token')
-    // if (token) {
-    //   config.headers.Authorization = `Bearer ${token}`
-    // }
+    const token = authService.getToken()
+    const url = config.url || ''
+
+    // Add API key to create and join endpoints
+    if ((url === '/sessions' && config.method === 'post') ||
+        (url.includes('/join') && config.method === 'post')) {
+      config.headers['X-API-Key'] = API_KEY
+    }
+
+    // Add Bearer token to all other authenticated endpoints
+    if (token &&
+        !(url === '/sessions' && config.method === 'post') &&
+        !url.includes('/join')) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+
     return config
   },
   (error) => {
@@ -31,6 +48,21 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     console.error('API Error:', error.response?.data || error.message)
+
+    // Handle 401 - Unauthorized (token expired/invalid)
+    if (error.response?.status === 401) {
+      authService.clearToken()
+      // Dispatch event for components to handle redirect
+      window.dispatchEvent(new CustomEvent('auth:unauthorized'))
+    }
+
+    // Handle 403 - Forbidden (not authorized for action)
+    if (error.response?.status === 403) {
+      window.dispatchEvent(new CustomEvent('auth:forbidden', {
+        detail: { message: error.response?.data?.error || 'Action not allowed' }
+      }))
+    }
+
     return Promise.reject(error)
   }
 )
@@ -63,8 +95,8 @@ export const sessionApi = {
   /**
    * Leave session
    */
-  leave(sessionCode, participantId) {
-    return apiClient.delete(`/sessions/${sessionCode}/participants/${participantId}`)
+  leave(sessionCode) {
+    return apiClient.delete(`/sessions/${sessionCode}/leave`)
   },
 
   /**

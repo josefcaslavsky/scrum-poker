@@ -192,16 +192,43 @@ const handleCardClick = (value) => {
 };
 
 const handleStartVoting = async () => {
-  await store.startVoting();
+  try {
+    await store.startVoting();
+  } catch (error) {
+    if (error.response?.status === 403) {
+      alert('Only the host can start voting');
+    } else {
+      console.error('Failed to start voting:', error);
+      alert('Failed to start voting. Please try again.');
+    }
+  }
 };
 
 const handleForceReveal = async () => {
-  await store.revealCards();
-  triggerConfetti();
+  try {
+    await store.revealCards();
+    triggerConfetti();
+  } catch (error) {
+    if (error.response?.status === 403) {
+      alert('Only the host can reveal cards');
+    } else {
+      console.error('Failed to reveal cards:', error);
+      alert('Failed to reveal cards. Please try again.');
+    }
+  }
 };
 
 const handleNewRound = async () => {
-  await store.startNewRound();
+  try {
+    await store.startNewRound();
+  } catch (error) {
+    if (error.response?.status === 403) {
+      alert('Only the host can start a new round');
+    } else {
+      console.error('Failed to start new round:', error);
+      alert('Failed to start new round. Please try again.');
+    }
+  }
 };
 
 const triggerConfetti = () => {
@@ -221,17 +248,33 @@ const checkRevealChange = setInterval(() => {
   previousRevealed = store.isRevealed;
 }, 100);
 
+// Handle authentication errors
+const handleUnauthorized = () => {
+  console.warn('[App] Authentication token expired or invalid');
+  alert('Your session has expired. Please rejoin.');
+  store.leaveSession();
+  clearSessionInfo();
+};
+
+const handleForbidden = (event) => {
+  const message = event.detail?.message || 'Action not allowed';
+  console.warn('[App] Forbidden action:', message);
+  alert(message);
+};
+
 onMounted(async () => {
+  // Listen for auth errors from API interceptor
+  window.addEventListener('auth:unauthorized', handleUnauthorized);
+  window.addEventListener('auth:forbidden', handleForbidden);
+
   // Check for saved session and attempt to rejoin
   const savedSession = getSessionInfo();
 
   if (savedSession && !store.inSession) {
-    console.log('[App] Found saved session, attempting to rejoin:', savedSession);
     isRejoining.value = true;
 
     try {
       await store.rejoinSession(savedSession);
-      console.log('[App] Successfully rejoined session');
     } catch (error) {
       console.error('[App] Failed to rejoin session:', error);
       // Clear invalid session info
@@ -249,6 +292,9 @@ onMounted(async () => {
 onUnmounted(() => {
   mockApi.cleanup();
   clearInterval(checkRevealChange);
+  // Remove auth event listeners
+  window.removeEventListener('auth:unauthorized', handleUnauthorized);
+  window.removeEventListener('auth:forbidden', handleForbidden);
 });
 </script>
 
