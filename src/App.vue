@@ -91,7 +91,12 @@
       />
 
       <!-- Participants -->
-      <ParticipantList :participants="store.participants" />
+      <ParticipantList
+        :participants="store.participants"
+        :is-facilitator="store.currentUser.isFacilitator"
+        :current-user-id="store.currentUser.id"
+        @remove-participant="handleRemoveParticipant"
+      />
 
       <!-- Actions (only shown to facilitator) -->
       <div v-if="store.currentUser.isFacilitator" class="actions">
@@ -258,6 +263,20 @@ const handleNewRound = async () => {
     } else {
       console.error('Failed to start new round:', error);
       alert('Failed to start new round. Please try again.');
+    }
+  }
+};
+
+const handleRemoveParticipant = async (participantId) => {
+  const participant = store.participants.find(p => p.id === participantId);
+  const participantName = participant?.name || 'this participant';
+
+  if (confirm(`Are you sure you want to remove ${participantName} from the session?`)) {
+    try {
+      await store.removeMember(participantId);
+    } catch (error) {
+      console.error('Failed to remove participant:', error);
+      alert('Failed to remove participant. Please try again.');
     }
   }
 };

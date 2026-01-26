@@ -619,6 +619,30 @@ export const useSessionStore = defineStore('session', () => {
     }
   };
 
+  // Remove a participant from the session (facilitator only)
+  const removeMember = async (participantId) => {
+    if (!currentUser.value.isFacilitator) {
+      console.warn('Only facilitator can remove members');
+      return;
+    }
+
+    try {
+      // TODO: Call API endpoint when available
+      // await sessionApi.removeMember(sessionCode.value, participantId);
+      console.log(`[SessionStore] Remove member requested for participant: ${participantId}`);
+
+      // For now, just log the action - API integration will be added later
+      // Once API is ready, uncomment the API call above and the local state update below:
+      // const index = participants.value.findIndex(p => p.id === participantId);
+      // if (index !== -1) {
+      //   participants.value.splice(index, 1);
+      // }
+    } catch (error) {
+      console.error('[SessionStore] Failed to remove member:', error);
+      throw error;
+    }
+  };
+
   return {
     // State
     sessionCode,
@@ -647,6 +671,7 @@ export const useSessionStore = defineStore('session', () => {
     joinSession,
     rejoinSession,
     leaveSession,
+    removeMember,
     selectCard,
     startVoting,
     startNewRound,
