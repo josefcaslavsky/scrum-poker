@@ -297,6 +297,49 @@ export const useSessionStore = defineStore('session', () => {
         }
       },
 
+      onParticipantRemoved: (event) => {
+        // Check if the current user was removed
+        if (event.participant_id === currentUser.value.id) {
+          // Current user was kicked by host
+          // Unsubscribe from WebSocket
+          if (sessionCode.value) {
+            unsubscribeFromSession(sessionCode.value);
+          }
+          wsChannel.value = null;
+
+          // Clear authentication token
+          authService.clearToken();
+
+          // Clear session info from localStorage
+          clearSessionInfo();
+
+          // Reset state
+          inSession.value = false;
+          sessionCode.value = null;
+          currentRound.value = 1;
+          currentUser.value = {
+            id: null,
+            name: 'Anonymous',
+            emoji: '👤',
+            isFacilitator: false
+          };
+          participants.value = [];
+          userCard.value = null;
+          isRevealed.value = false;
+          isVoting.value = false;
+          stopTimer();
+
+          // Notify user they were removed
+          alert('You have been removed from the session by the host.');
+        } else {
+          // Another participant was removed - update local list
+          const index = participants.value.findIndex(p => p.id === event.participant_id);
+          if (index !== -1) {
+            participants.value.splice(index, 1);
+          }
+        }
+      },
+
       onVotingStarted: () => {
         isVoting.value = true;
         isRevealed.value = false;
@@ -627,16 +670,14 @@ export const useSessionStore = defineStore('session', () => {
     }
 
     try {
-      // TODO: Call API endpoint when available
-      // await sessionApi.removeMember(sessionCode.value, participantId);
-      console.log(`[SessionStore] Remove member requested for participant: ${participantId}`);
+      await sessionApi.removeParticipant(sessionCode.value, participantId);
 
-      // For now, just log the action - API integration will be added later
-      // Once API is ready, uncomment the API call above and the local state update below:
-      // const index = participants.value.findIndex(p => p.id === participantId);
-      // if (index !== -1) {
-      //   participants.value.splice(index, 1);
-      // }
+      // Local state will be updated via WebSocket ParticipantRemoved event
+      // But update immediately for responsive UI
+      const index = participants.value.findIndex(p => p.id === participantId);
+      if (index !== -1) {
+        participants.value.splice(index, 1);
+      }
     } catch (error) {
       console.error('[SessionStore] Failed to remove member:', error);
       throw error;

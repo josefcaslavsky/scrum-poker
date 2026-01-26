@@ -73,6 +73,13 @@ export function subscribeToSession(sessionCode, callbacks = {}) {
     })
   }
 
+  // Participant removed by host
+  if (callbacks.onParticipantRemoved) {
+    channel.listen('ParticipantRemoved', (data) => {
+      callbacks.onParticipantRemoved(data)
+    })
+  }
+
   // Voting started
   if (callbacks.onVotingStarted) {
     channel.listen('VotingStarted', (data) => {

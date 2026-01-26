@@ -125,6 +125,13 @@ export const sessionApi = {
    */
   newRound(sessionCode) {
     return apiClient.post(`/sessions/${sessionCode}/next-round`)
+  },
+
+  /**
+   * Remove a participant from session (host only)
+   */
+  removeParticipant(sessionCode, participantId) {
+    return apiClient.delete(`/sessions/${sessionCode}/participants/${participantId}`)
   }
 }
 
