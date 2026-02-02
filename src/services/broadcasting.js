@@ -130,9 +130,65 @@ export function disconnectEcho() {
   }
 }
 
+/**
+ * Check if WebSocket connection is active
+ * @returns {boolean}
+ */
+export function isConnected() {
+  if (!echoInstance) return false
+
+  const pusher = echoInstance.connector.pusher
+  return pusher && pusher.connection.state === 'connected'
+}
+
+/**
+ * Get current connection state
+ * @returns {string|null}
+ */
+export function getConnectionState() {
+  if (!echoInstance) return null
+
+  const pusher = echoInstance.connector.pusher
+  return pusher ? pusher.connection.state : null
+}
+
+/**
+ * Force reconnect the WebSocket connection
+ * Useful after iOS Safari suspends the connection
+ */
+export function reconnect() {
+  if (!echoInstance) return
+
+  const pusher = echoInstance.connector.pusher
+  if (pusher) {
+    // Disconnect and reconnect
+    pusher.disconnect()
+    pusher.connect()
+  }
+}
+
+/**
+ * Subscribe to connection state changes
+ * @param {function} callback - Called with (state, previousState)
+ */
+export function onConnectionStateChange(callback) {
+  if (!echoInstance) return null
+
+  const pusher = echoInstance.connector.pusher
+  if (pusher) {
+    pusher.connection.bind('state_change', (states) => {
+      callback(states.current, states.previous)
+    })
+  }
+}
+
 export default {
   getEcho,
   subscribeToSession,
   unsubscribeFromSession,
-  disconnectEcho
+  disconnectEcho,
+  isConnected,
+  getConnectionState,
+  reconnect,
+  onConnectionStateChange
 }
