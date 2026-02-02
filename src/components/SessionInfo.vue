@@ -5,6 +5,9 @@
       <button class="copy-btn" @click="copySessionCode" :title="copyTooltip">
         {{ copyButtonText }}
       </button>
+      <button class="copy-btn" @click="shareSessionLink" title="Share invite link">
+        {{ shareBtnText }}
+      </button>
     </div>
     <span class="round-info">Round {{ currentRound }}</span>
   </div>
@@ -12,6 +15,7 @@
 
 <script setup>
 import { ref } from 'vue';
+import { buildSessionLink } from '../composables/useSessionLink';
 
 const props = defineProps({
   sessionCode: {
@@ -26,6 +30,7 @@ const props = defineProps({
 
 const copyButtonText = ref('📋');
 const copyTooltip = ref('Copy session code');
+const shareBtnText = ref('🔗');
 
 const copySessionCode = async () => {
   try {
@@ -38,6 +43,28 @@ const copySessionCode = async () => {
     }, 2000);
   } catch (err) {
     console.error('Failed to copy:', err);
+  }
+};
+
+const shareSessionLink = async () => {
+  const link = buildSessionLink(props.sessionCode);
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'Join Scrum Poker', url: link });
+      return;
+    } catch (err) {
+      // User cancelled or share failed — fall through to clipboard
+      if (err.name === 'AbortError') return;
+    }
+  }
+
+  try {
+    await navigator.clipboard.writeText(link);
+    shareBtnText.value = '✓';
+    setTimeout(() => { shareBtnText.value = '🔗'; }, 2000);
+  } catch (err) {
+    console.error('Failed to copy link:', err);
   }
 };
 </script>

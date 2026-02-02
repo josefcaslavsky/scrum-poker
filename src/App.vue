@@ -6,6 +6,12 @@
       <p class="loading-text">Reconnecting to session...</p>
     </div>
 
+    <!-- Loading State (when auto-joining via invite link) -->
+    <div v-else-if="isAutoJoining" class="loading-container">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">Joining session...</p>
+    </div>
+
     <!-- Profile Setup View (first time or editing profile) -->
     <ProfileSetupPage
       v-else-if="!store.inSession && showProfileSetup"
@@ -120,6 +126,7 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import { useSessionStore } from './stores/sessionStore';
 import { useMockApi } from './composables/useMockApi';
 import { getUserPreferences, getSessionInfo, clearSessionInfo } from './composables/useLocalStorage';
+import { getSessionCodeFromUrl, clearSessionCodeFromUrl } from './composables/useSessionLink';
 import confetti from 'canvas-confetti';
 
 // Import components
@@ -138,6 +145,8 @@ const mockApi = useMockApi();
 const hasProfile = localStorage.getItem('userPreferences') !== null;
 const showProfileSetup = ref(!hasProfile);
 const isRejoining = ref(false);
+const pendingJoinCode = ref(null);
+const isAutoJoining = ref(false);
 
 const cards = [
   { value: 0, label: '0' },
@@ -153,8 +162,30 @@ const cards = [
   { value: -2, label: '☕' }
 ];
 
+const autoJoinSession = async (code) => {
+  isAutoJoining.value = true;
+  try {
+    const prefs = getUserPreferences();
+    await store.joinSession(code, { name: prefs.name, emoji: prefs.emoji });
+  } catch (error) {
+    console.error('Failed to auto-join session:', error);
+    if (error.response?.status === 404) {
+      alert('Session not found. It may have expired.');
+    } else {
+      alert(error.message || 'Failed to join session. Please try again.');
+    }
+  } finally {
+    isAutoJoining.value = false;
+  }
+};
+
 const handleProfileSaved = () => {
   showProfileSetup.value = false;
+  if (pendingJoinCode.value) {
+    const code = pendingJoinCode.value;
+    pendingJoinCode.value = null;
+    autoJoinSession(code);
+  }
 };
 
 const handleEditProfile = () => {
@@ -267,6 +298,10 @@ onMounted(async () => {
   window.addEventListener('auth:unauthorized', handleUnauthorized);
   window.addEventListener('auth:forbidden', handleForbidden);
 
+  // Capture and clean invite link from URL immediately
+  const joinCode = getSessionCodeFromUrl();
+  clearSessionCodeFromUrl();
+
   // Check for saved session and attempt to rejoin
   const savedSession = getSessionInfo();
 
@@ -285,6 +320,16 @@ onMounted(async () => {
       }
     } finally {
       isRejoining.value = false;
+    }
+  }
+
+  // If not already in a session and we have a join code from the URL, handle it
+  if (!store.inSession && joinCode) {
+    if (hasProfile) {
+      autoJoinSession(joinCode);
+    } else {
+      pendingJoinCode.value = joinCode;
+      showProfileSetup.value = true;
     }
   }
 });
