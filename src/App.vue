@@ -323,13 +323,20 @@ onMounted(async () => {
     }
   }
 
-  // If not already in a session and we have a join code from the URL, handle it
-  if (!store.inSession && joinCode) {
-    if (hasProfile) {
-      autoJoinSession(joinCode);
-    } else {
-      pendingJoinCode.value = joinCode;
-      showProfileSetup.value = true;
+  // Handle invite link join code
+  if (joinCode) {
+    // If already in a different session, leave it first
+    if (store.inSession && store.sessionCode !== joinCode) {
+      await store.leaveSession();
+    }
+
+    if (!store.inSession) {
+      if (hasProfile) {
+        autoJoinSession(joinCode);
+      } else {
+        pendingJoinCode.value = joinCode;
+        showProfileSetup.value = true;
+      }
     }
   }
 });
