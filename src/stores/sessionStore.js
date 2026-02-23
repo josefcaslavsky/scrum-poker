@@ -1,8 +1,8 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
+import { ref, computed, onUnmounted } from 'vue';
 import { sessionApi } from '../services/api';
 import authService from '../services/auth';
-import { subscribeToSession, unsubscribeFromSession } from '../services/broadcasting';
+import { subscribeToSession, unsubscribeFromSession, isConnected, reconnect, onConnectionStateChange } from '../services/broadcasting';
 import { saveSessionInfo, clearSessionInfo } from '../composables/useLocalStorage';
 
 export const useSessionStore = defineStore('session', () => {
@@ -23,6 +23,7 @@ export const useSessionStore = defineStore('session', () => {
   const isVoting = ref(false);
   const timerInterval = ref(null);
   const wsChannel = ref(null);
+  const visibilityHandler = ref(null);
 
   // Computed
   const allVoted = computed(() => {
@@ -273,8 +274,86 @@ export const useSessionStore = defineStore('session', () => {
     }
   };
 
+  // Helper: Refresh session state from API (used after visibility change)
+  const refreshSessionState = async () => {
+    if (!sessionCode.value) return;
+
+    try {
+      const response = await sessionApi.get(sessionCode.value);
+      const session = response.data;
+
+      // Update participants list
+      participants.value = session.participants.map(p => {
+        // Preserve existing vote state for participants we already have
+        const existing = participants.value.find(ep => ep.id === p.id);
+        return {
+          id: p.id,
+          name: p.name,
+          emoji: p.emoji,
+          hasVoted: existing?.hasVoted || false,
+          vote: existing?.vote || null,
+          isUser: p.id === currentUser.value.id
+        };
+      });
+
+      // Sync voting state
+      isVoting.value = session.status === 'voting';
+      isRevealed.value = session.status === 'revealed';
+
+      // If votes are revealed, update them
+      if (isRevealed.value && session.votes) {
+        session.votes.forEach(vote => {
+          const participant = participants.value.find(p => p.id === vote.participant_id);
+          if (participant) {
+            participant.vote = convertCardValueFromApi(vote.card_value);
+            participant.hasVoted = true;
+          }
+        });
+      }
+    } catch (error) {
+      console.error('[SessionStore] Failed to refresh session state:', error);
+    }
+  };
+
+  // Helper: Handle visibility change (iOS Safari kills WebSocket when backgrounded)
+  const handleVisibilityChange = async () => {
+    if (document.visibilityState === 'visible' && inSession.value) {
+      // Page became visible again - check connection and refresh state
+      if (!isConnected()) {
+        console.log('[SessionStore] Page visible, WebSocket disconnected - reconnecting...');
+        reconnect();
+      }
+
+      // Always refresh state from API to ensure consistency
+      // iOS Safari may have killed the connection silently
+      await refreshSessionState();
+    }
+  };
+
+  // Helper: Setup visibility change listener for iOS Safari
+  const setupVisibilityHandler = () => {
+    // Remove existing handler if any
+    if (visibilityHandler.value) {
+      document.removeEventListener('visibilitychange', visibilityHandler.value);
+    }
+
+    visibilityHandler.value = handleVisibilityChange;
+    document.addEventListener('visibilitychange', visibilityHandler.value);
+  };
+
+  // Helper: Cleanup visibility handler
+  const cleanupVisibilityHandler = () => {
+    if (visibilityHandler.value) {
+      document.removeEventListener('visibilitychange', visibilityHandler.value);
+      visibilityHandler.value = null;
+    }
+  };
+
   // Helper: Setup WebSocket subscriptions
   const setupWebSocket = () => {
+    // Setup visibility change handler for iOS Safari
+    setupVisibilityHandler();
+
     wsChannel.value = subscribeToSession(sessionCode.value, {
       onParticipantJoined: (event) => {
         // Add new participant to list
@@ -397,6 +476,8 @@ export const useSessionStore = defineStore('session', () => {
       },
 
       onSessionEnded: () => {
+        // Cleanup visibility handler
+        cleanupVisibilityHandler();
 
         // Unsubscribe from WebSocket
         if (sessionCode.value) {
@@ -619,6 +700,9 @@ export const useSessionStore = defineStore('session', () => {
         // If host leaves, backend will broadcast SessionEnded to all participants
       }
 
+      // Cleanup visibility handler
+      cleanupVisibilityHandler();
+
       // Unsubscribe from WebSocket
       if (sessionCode.value) {
         unsubscribeFromSession(sessionCode.value);
@@ -649,6 +733,7 @@ export const useSessionStore = defineStore('session', () => {
     } catch (error) {
       console.error('[SessionStore] Failed to leave session:', error);
       // Still reset local state even if API call fails
+      cleanupVisibilityHandler();
       authService.clearToken();
       clearSessionInfo();
       inSession.value = false;
