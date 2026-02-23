@@ -13,6 +13,16 @@
         <div class="participant-status">
           {{ participant.hasVoted ? '✓' : '⏱' }}
         </div>
+        <button
+          v-if="isFacilitator && String(participant.id) !== String(currentUserId)"
+          class="remove-btn"
+          :disabled="removingParticipantId === participant.id"
+          :aria-label="`Remove ${participant.name} from session`"
+          @click="$emit('remove-participant', participant.id)"
+          title="Remove participant"
+        >
+          &times;
+        </button>
       </div>
     </div>
   </div>
@@ -23,8 +33,22 @@ const props = defineProps({
   participants: {
     type: Array,
     required: true
+  },
+  isFacilitator: {
+    type: Boolean,
+    default: false
+  },
+  currentUserId: {
+    type: [String, Number],
+    default: null
+  },
+  removingParticipantId: {
+    type: [String, Number],
+    default: null
   }
 });
+
+defineEmits(['remove-participant']);
 </script>
 
 <style scoped>
@@ -76,6 +100,29 @@ const props = defineProps({
 .participant-status {
   font-size: 1.2em;
   margin-left: 5px;
+}
+
+.remove-btn {
+  background: transparent;
+  border: none;
+  color: #999;
+  font-size: 1.4em;
+  cursor: pointer;
+  padding: 0 5px;
+  margin-left: 5px;
+  line-height: 1;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.remove-btn:hover {
+  color: #f44336;
+  background: rgba(244, 67, 54, 0.1);
+}
+
+.remove-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 @keyframes fadeInUp {

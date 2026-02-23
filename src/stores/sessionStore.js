@@ -297,6 +297,49 @@ export const useSessionStore = defineStore('session', () => {
         }
       },
 
+      onParticipantRemoved: (event) => {
+        // Check if the current user was removed
+        if (event && event.participant_id === currentUser.value.id) {
+          // Current user was kicked by host
+          // Unsubscribe from WebSocket
+          if (sessionCode.value) {
+            unsubscribeFromSession(sessionCode.value);
+          }
+          wsChannel.value = null;
+
+          // Clear authentication token
+          authService.clearToken();
+
+          // Clear session info from localStorage
+          clearSessionInfo();
+
+          // Reset state
+          inSession.value = false;
+          sessionCode.value = null;
+          currentRound.value = 1;
+          currentUser.value = {
+            id: null,
+            name: 'Anonymous',
+            emoji: '👤',
+            isFacilitator: false
+          };
+          participants.value = [];
+          userCard.value = null;
+          isRevealed.value = false;
+          isVoting.value = false;
+          stopTimer();
+
+          // Notify user they were removed
+          alert('You have been removed from the session by the host.');
+        } else if (event) {
+          // Another participant was removed - update local list
+          const index = participants.value.findIndex(p => p.id === event.participant_id);
+          if (index !== -1) {
+            participants.value.splice(index, 1);
+          }
+        }
+      },
+
       onVotingStarted: () => {
         isVoting.value = true;
         isRevealed.value = false;
@@ -619,6 +662,22 @@ export const useSessionStore = defineStore('session', () => {
     }
   };
 
+  // Remove a participant from the session (facilitator only)
+  const removeParticipant = async (participantId) => {
+    if (!currentUser.value.isFacilitator) {
+      console.warn('Only facilitator can remove participants');
+      return;
+    }
+
+    try {
+      await sessionApi.removeParticipant(sessionCode.value, participantId);
+      // State update is handled by WebSocket ParticipantRemoved event
+    } catch (error) {
+      console.error('[SessionStore] Failed to remove participant:', error);
+      throw error;
+    }
+  };
+
   return {
     // State
     sessionCode,
@@ -647,6 +706,7 @@ export const useSessionStore = defineStore('session', () => {
     joinSession,
     rejoinSession,
     leaveSession,
+    removeParticipant,
     selectCard,
     startVoting,
     startNewRound,
