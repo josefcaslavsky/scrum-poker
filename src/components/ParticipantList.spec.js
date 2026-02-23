@@ -91,4 +91,105 @@ describe('ParticipantList', () => {
     expect(wrapper.find('h3').text()).toBe('Participants (1)');
     expect(wrapper.findAll('.participant')).toHaveLength(1);
   });
+
+  describe('Remove participant button', () => {
+    it('shows remove buttons for facilitator (excluding current user)', () => {
+      const wrapper = mount(ParticipantList, {
+        props: {
+          participants: mockParticipants,
+          isFacilitator: true,
+          currentUserId: 1
+        }
+      });
+
+      // Alice (id:1) is current user, so no button for her. Bob and Charlie get buttons.
+      expect(wrapper.findAll('.remove-btn')).toHaveLength(2);
+    });
+
+    it('hides remove buttons when user is not facilitator', () => {
+      const wrapper = mount(ParticipantList, {
+        props: {
+          participants: mockParticipants,
+          isFacilitator: false,
+          currentUserId: 1
+        }
+      });
+
+      expect(wrapper.findAll('.remove-btn')).toHaveLength(0);
+    });
+
+    it('hides remove button for current user own entry', () => {
+      const wrapper = mount(ParticipantList, {
+        props: {
+          participants: mockParticipants,
+          isFacilitator: true,
+          currentUserId: 1
+        }
+      });
+
+      // Alice (id:1) is the current user - her entry should have no remove button
+      const aliceEntry = wrapper.findAll('.participant')[0];
+      expect(aliceEntry.find('.remove-btn').exists()).toBe(false);
+    });
+
+    it('hides remove button for current user when id is passed as string', () => {
+      const wrapper = mount(ParticipantList, {
+        props: {
+          participants: mockParticipants,
+          isFacilitator: true,
+          currentUserId: '1'
+        }
+      });
+
+      const aliceEntry = wrapper.findAll('.participant')[0];
+      expect(aliceEntry.find('.remove-btn').exists()).toBe(false);
+    });
+
+    it('emits remove-participant event with participant id when button clicked', async () => {
+      const wrapper = mount(ParticipantList, {
+        props: {
+          participants: mockParticipants,
+          isFacilitator: true,
+          currentUserId: 1
+        }
+      });
+
+      // Click the first remove button (Bob, id:2)
+      await wrapper.findAll('.remove-btn')[0].trigger('click');
+
+      expect(wrapper.emitted('remove-participant')).toBeTruthy();
+      expect(wrapper.emitted('remove-participant')[0]).toEqual([2]);
+    });
+
+    it('shows remove button with correct aria-label', () => {
+      const wrapper = mount(ParticipantList, {
+        props: {
+          participants: mockParticipants,
+          isFacilitator: true,
+          currentUserId: 1
+        }
+      });
+
+      const buttons = wrapper.findAll('.remove-btn');
+      expect(buttons[0].attributes('aria-label')).toBe('Remove Bob from session');
+      expect(buttons[1].attributes('aria-label')).toBe('Remove Charlie from session');
+    });
+
+    it('disables remove button when removingParticipantId matches', () => {
+      const wrapper = mount(ParticipantList, {
+        props: {
+          participants: mockParticipants,
+          isFacilitator: true,
+          currentUserId: 1,
+          removingParticipantId: 2
+        }
+      });
+
+      const buttons = wrapper.findAll('.remove-btn');
+      // Bob (id:2) button should be disabled
+      expect(buttons[0].attributes('disabled')).toBeDefined();
+      // Charlie (id:3) button should not be disabled
+      expect(buttons[1].attributes('disabled')).toBeUndefined();
+    });
+  });
 });

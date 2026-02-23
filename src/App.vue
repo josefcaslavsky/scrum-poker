@@ -95,6 +95,7 @@
         :participants="store.participants"
         :is-facilitator="store.currentUser.isFacilitator"
         :current-user-id="store.currentUser.id"
+        :removing-participant-id="removingParticipantId"
         @remove-participant="handleRemoveParticipant"
       />
 
@@ -152,6 +153,7 @@ const showProfileSetup = ref(!hasProfile);
 const isRejoining = ref(false);
 const pendingJoinCode = ref(null);
 const isAutoJoining = ref(false);
+const removingParticipantId = ref(null);
 
 const cards = [
   { value: 0, label: '0' },
@@ -272,11 +274,18 @@ const handleRemoveParticipant = async (participantId) => {
   const participantName = participant?.name || 'this participant';
 
   if (confirm(`Are you sure you want to remove ${participantName} from the session?`)) {
+    removingParticipantId.value = participantId;
     try {
-      await store.removeMember(participantId);
+      await store.removeParticipant(participantId);
     } catch (error) {
-      console.error('Failed to remove participant:', error);
-      alert('Failed to remove participant. Please try again.');
+      if (error.response?.status === 403) {
+        alert('Only the host can remove participants');
+      } else {
+        console.error('Failed to remove participant:', error);
+        alert('Failed to remove participant. Please try again.');
+      }
+    } finally {
+      removingParticipantId.value = null;
     }
   }
 };

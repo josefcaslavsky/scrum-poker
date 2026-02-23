@@ -299,7 +299,7 @@ export const useSessionStore = defineStore('session', () => {
 
       onParticipantRemoved: (event) => {
         // Check if the current user was removed
-        if (event.participant_id === currentUser.value.id) {
+        if (event && event.participant_id === currentUser.value.id) {
           // Current user was kicked by host
           // Unsubscribe from WebSocket
           if (sessionCode.value) {
@@ -331,7 +331,7 @@ export const useSessionStore = defineStore('session', () => {
 
           // Notify user they were removed
           alert('You have been removed from the session by the host.');
-        } else {
+        } else if (event) {
           // Another participant was removed - update local list
           const index = participants.value.findIndex(p => p.id === event.participant_id);
           if (index !== -1) {
@@ -663,23 +663,17 @@ export const useSessionStore = defineStore('session', () => {
   };
 
   // Remove a participant from the session (facilitator only)
-  const removeMember = async (participantId) => {
+  const removeParticipant = async (participantId) => {
     if (!currentUser.value.isFacilitator) {
-      console.warn('Only facilitator can remove members');
+      console.warn('Only facilitator can remove participants');
       return;
     }
 
     try {
       await sessionApi.removeParticipant(sessionCode.value, participantId);
-
-      // Local state will be updated via WebSocket ParticipantRemoved event
-      // But update immediately for responsive UI
-      const index = participants.value.findIndex(p => p.id === participantId);
-      if (index !== -1) {
-        participants.value.splice(index, 1);
-      }
+      // State update is handled by WebSocket ParticipantRemoved event
     } catch (error) {
-      console.error('[SessionStore] Failed to remove member:', error);
+      console.error('[SessionStore] Failed to remove participant:', error);
       throw error;
     }
   };
@@ -712,7 +706,7 @@ export const useSessionStore = defineStore('session', () => {
     joinSession,
     rejoinSession,
     leaveSession,
-    removeMember,
+    removeParticipant,
     selectCard,
     startVoting,
     startNewRound,

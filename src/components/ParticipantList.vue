@@ -14,8 +14,10 @@
           {{ participant.hasVoted ? '✓' : '⏱' }}
         </div>
         <button
-          v-if="isFacilitator && participant.id !== currentUserId"
+          v-if="isFacilitator && String(participant.id) !== String(currentUserId)"
           class="remove-btn"
+          :disabled="removingParticipantId === participant.id"
+          :aria-label="`Remove ${participant.name} from session`"
           @click="$emit('remove-participant', participant.id)"
           title="Remove participant"
         >
@@ -37,7 +39,11 @@ const props = defineProps({
     default: false
   },
   currentUserId: {
-    type: String,
+    type: [String, Number],
+    default: null
+  },
+  removingParticipantId: {
+    type: [String, Number],
     default: null
   }
 });
@@ -112,6 +118,11 @@ defineEmits(['remove-participant']);
 .remove-btn:hover {
   color: #f44336;
   background: rgba(244, 67, 54, 0.1);
+}
+
+.remove-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 @keyframes fadeInUp {
