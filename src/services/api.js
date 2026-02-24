@@ -128,6 +128,13 @@ export const sessionApi = {
   },
 
   /**
+   * End session and get summary (host only)
+   */
+  endSession(sessionCode) {
+    return apiClient.post(`/sessions/${sessionCode}/end`)
+  },
+
+  /**
    * Remove a participant from session (host only)
    */
   removeParticipant(sessionCode, participantId) {

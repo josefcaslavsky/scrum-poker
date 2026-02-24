@@ -1,7 +1,17 @@
 <template>
   <div class="app">
+    <!-- Session Summary (shown after host ends session) -->
+    <SessionSummary
+      v-if="store.sessionSummary"
+      :session-code="store.sessionSummary.sessionCode"
+      :rounds-played="store.sessionSummary.roundsPlayed"
+      :participants="store.sessionSummary.participants"
+      :total-story-points="store.sessionSummary.totalStoryPoints"
+      @close="handleSummaryClose"
+    />
+
     <!-- Loading State (when rejoining session) -->
-    <div v-if="isRejoining" class="loading-container">
+    <div v-else-if="isRejoining" class="loading-container">
       <div class="loading-spinner"></div>
       <p class="loading-text">Reconnecting to session...</p>
     </div>
@@ -30,14 +40,19 @@
     <div v-else class="container">
       <!-- Header -->
       <div class="header">
-        <button class="btn-leave" @click="handleLeaveSession" title="Leave Session">
-          <span class="leave-text">Leave Session</span>
-          <svg class="leave-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-            <polyline points="16 17 21 12 16 7"></polyline>
-            <line x1="21" y1="12" x2="9" y2="12"></line>
-          </svg>
-        </button>
+        <div class="header-buttons">
+          <button v-if="store.currentUser.isFacilitator" class="btn-end" @click="handleEndSession" title="End Session">
+            <span class="end-text">End Session</span>
+          </button>
+          <button class="btn-leave" @click="handleLeaveSession" title="Leave Session">
+            <span class="leave-text">Leave Session</span>
+            <svg class="leave-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+          </button>
+        </div>
         <h1 class="title">
           <span class="emoji">🃏</span>
           Scrum Poker
@@ -128,7 +143,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, watch, onMounted, onUnmounted } from 'vue';
 import { useSessionStore } from './stores/sessionStore';
 import { useMockApi } from './composables/useMockApi';
 import { getUserPreferences, getSessionInfo, clearSessionInfo } from './composables/useLocalStorage';
@@ -143,6 +158,7 @@ import VotingTimer from './components/VotingTimer.vue';
 import ParticipantList from './components/ParticipantList.vue';
 import ResultsView from './components/ResultsView.vue';
 import SessionInfo from './components/SessionInfo.vue';
+import SessionSummary from './components/SessionSummary.vue';
 
 const store = useSessionStore();
 const mockApi = useMockApi();
@@ -215,6 +231,21 @@ const handleJoinSession = async ({ sessionId, name, emoji }) => {
     console.error('Failed to join session:', error);
     alert(error.message || 'Failed to join session. Please try again.');
   }
+};
+
+const handleEndSession = async () => {
+  if (confirm('End the session for everyone? This will show the summary screen.')) {
+    try {
+      await store.endSession();
+    } catch (error) {
+      console.error('Failed to end session:', error);
+      alert('Failed to end session. Please try again.');
+    }
+  }
+};
+
+const handleSummaryClose = () => {
+  store.clearSummary();
 };
 
 const handleLeaveSession = () => {
@@ -298,6 +329,26 @@ const triggerConfetti = () => {
   });
 };
 
+// Multi-burst confetti for session summary celebration
+const triggerSummaryConfetti = () => {
+  // First burst - center
+  setTimeout(() => {
+    confetti({ particleCount: 80, spread: 100, origin: { x: 0.5, y: 0.4 } });
+  }, 0);
+  // Second burst - left
+  setTimeout(() => {
+    confetti({ particleCount: 50, spread: 60, angle: 60, origin: { x: 0.2, y: 0.6 } });
+  }, 400);
+  // Third burst - right
+  setTimeout(() => {
+    confetti({ particleCount: 50, spread: 60, angle: 120, origin: { x: 0.8, y: 0.6 } });
+  }, 800);
+  // Final burst - big center
+  setTimeout(() => {
+    confetti({ particleCount: 120, spread: 120, origin: { x: 0.5, y: 0.5 }, startVelocity: 45 });
+  }, 1200);
+};
+
 // Watch for automatic reveals to trigger confetti
 let previousRevealed = false;
 const checkRevealChange = setInterval(() => {
@@ -320,6 +371,13 @@ const handleForbidden = (event) => {
   console.warn('[App] Forbidden action:', message);
   alert(message);
 };
+
+// Trigger confetti when session summary appears
+watch(() => store.sessionSummary, (newVal) => {
+  if (newVal) {
+    setTimeout(triggerSummaryConfetti, 1000);
+  }
+});
 
 onMounted(async () => {
   // Listen for auth errors from API interceptor
@@ -414,10 +472,33 @@ onUnmounted(() => {
   text-align: center;
 }
 
-.btn-leave {
+.header-buttons {
   position: absolute;
   top: 0;
   right: 0;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.btn-end {
+  padding: 0.5rem 1rem;
+  background: rgba(244, 67, 54, 0.25);
+  color: white;
+  border: 1px solid rgba(244, 67, 54, 0.5);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  white-space: nowrap;
+}
+
+.btn-end:hover {
+  background: rgba(244, 67, 54, 0.4);
+  border-color: rgba(244, 67, 54, 0.7);
+}
+
+.btn-leave {
   padding: 0.5rem 1rem;
   background: rgba(255, 255, 255, 0.2);
   color: white;
@@ -473,6 +554,11 @@ onUnmounted(() => {
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
+  .btn-end {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
   .btn-leave {
     padding: 0.5rem;
     width: 36px;
@@ -502,6 +588,24 @@ onUnmounted(() => {
 }
 
 @media (max-width: 480px) {
+  .btn-end .end-text {
+    display: none;
+  }
+
+  .btn-end::before {
+    content: '⏹';
+  }
+
+  .btn-end {
+    padding: 0.4rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .btn-leave {
     padding: 0.4rem;
     width: 32px;

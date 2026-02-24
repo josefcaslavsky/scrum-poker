@@ -23,6 +23,7 @@ export const useSessionStore = defineStore('session', () => {
   const isVoting = ref(false);
   const timerInterval = ref(null);
   const wsChannel = ref(null);
+  const sessionSummary = ref(null);
 
   // Computed
   const allVoted = computed(() => {
@@ -396,8 +397,7 @@ export const useSessionStore = defineStore('session', () => {
         startTimer();
       },
 
-      onSessionEnded: () => {
-
+      onSessionEnded: (data) => {
         // Unsubscribe from WebSocket
         if (sessionCode.value) {
           unsubscribeFromSession(sessionCode.value);
@@ -407,7 +407,7 @@ export const useSessionStore = defineStore('session', () => {
         // Clear session info from localStorage
         clearSessionInfo();
 
-        // Reset state
+        // Reset session state
         inSession.value = false;
         sessionCode.value = null;
         currentRound.value = 1;
@@ -423,8 +423,13 @@ export const useSessionStore = defineStore('session', () => {
         isVoting.value = false;
         stopTimer();
 
-        // Optionally notify user
-        alert('Session ended - the host has left');
+        if (data?.summary) {
+          // End Session with summary — show summary screen
+          sessionSummary.value = data.summary;
+        } else {
+          // Host left — alert as before
+          alert('Session ended - the host has left');
+        }
       }
     });
   };
@@ -662,6 +667,27 @@ export const useSessionStore = defineStore('session', () => {
     }
   };
 
+  // End session and show summary (facilitator only)
+  const endSession = async () => {
+    if (!currentUser.value.isFacilitator) {
+      console.warn('Only facilitator can end session');
+      return;
+    }
+
+    try {
+      await sessionApi.endSession(sessionCode.value);
+      // State update is handled by WebSocket SessionEnded event
+    } catch (error) {
+      console.error('[SessionStore] Failed to end session:', error);
+      throw error;
+    }
+  };
+
+  // Clear summary (returns to lobby)
+  const clearSummary = () => {
+    sessionSummary.value = null;
+  };
+
   // Remove a participant from the session (facilitator only)
   const removeParticipant = async (participantId) => {
     if (!currentUser.value.isFacilitator) {
@@ -689,6 +715,7 @@ export const useSessionStore = defineStore('session', () => {
     timerSeconds,
     isRevealed,
     isVoting,
+    sessionSummary,
 
     // Computed
     allVoted,
@@ -706,6 +733,8 @@ export const useSessionStore = defineStore('session', () => {
     joinSession,
     rejoinSession,
     leaveSession,
+    endSession,
+    clearSummary,
     removeParticipant,
     selectCard,
     startVoting,
