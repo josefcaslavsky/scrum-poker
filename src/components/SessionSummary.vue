@@ -48,13 +48,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({
-  sessionCode: String,
-  roundsPlayed: Number,
-  participants: Array,
-  totalStoryPoints: Number
+  sessionCode: { type: String, required: true },
+  roundsPlayed: { type: Number, required: true },
+  participants: { type: Array, required: true },
+  totalStoryPoints: { type: Number, required: true }
 })
 
 defineEmits(['close'])
@@ -68,6 +68,7 @@ const avgSPPerPerson = computed(() => {
 const animatedRounds = ref(0)
 const animatedTotalSP = ref(0)
 const animatedAvgSP = ref(0)
+const rafIds = []
 
 const animateValue = (refVal, target, duration = 1200, decimals = 0) => {
   const start = 0
@@ -85,18 +86,18 @@ const animateValue = (refVal, target, duration = 1200, decimals = 0) => {
       : Math.round(current)
 
     if (progress < 1) {
-      requestAnimationFrame(step)
+      rafIds.push(requestAnimationFrame(step))
     }
   }
 
-  requestAnimationFrame(step)
+  rafIds.push(requestAnimationFrame(step))
 }
 
 // Leaderboard with rank highlighting
 const leaderboard = computed(() => {
   if (!props.participants || props.participants.length === 0) return []
 
-  const sorted = [...props.participants].sort((a, b) => b.totalSP - a.totalSP)
+  const sorted = [...props.participants].sort((a, b) => (b.totalSP ?? 0) - (a.totalSP ?? 0))
   const lastIndex = sorted.length - 1
 
   return sorted.map((p, i) => {
@@ -114,8 +115,8 @@ const leaderboard = computed(() => {
       badge = '🥉'
     }
 
-    // Last place highlight (only if more than 1 participant and not also #1)
-    if (i === lastIndex && lastIndex > 0) {
+    // Last place highlight (only beyond podium positions)
+    if (i === lastIndex && lastIndex > 2) {
       rowClass = 'rank-last'
       badge = '🐢'
     }
@@ -129,6 +130,10 @@ onMounted(() => {
   setTimeout(() => animateValue(animatedRounds, props.roundsPlayed, 1000), 600)
   setTimeout(() => animateValue(animatedTotalSP, props.totalStoryPoints, 1200), 700)
   setTimeout(() => animateValue(animatedAvgSP, avgSPPerPerson.value, 1200, 1), 800)
+})
+
+onUnmounted(() => {
+  rafIds.forEach(id => cancelAnimationFrame(id))
 })
 </script>
 

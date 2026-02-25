@@ -373,9 +373,10 @@ const handleForbidden = (event) => {
 };
 
 // Trigger confetti when session summary appears
-watch(() => store.sessionSummary, (newVal) => {
+watch(() => store.sessionSummary, (newVal, _oldVal, onCleanup) => {
   if (newVal) {
-    setTimeout(triggerSummaryConfetti, 1000);
+    const timerId = setTimeout(triggerSummaryConfetti, 1000);
+    onCleanup(() => clearTimeout(timerId));
   }
 });
 
