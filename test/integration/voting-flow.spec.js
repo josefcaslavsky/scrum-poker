@@ -1,42 +1,105 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { setActivePinia, createPinia } from 'pinia';
+
+// Mock all external dependencies
+vi.mock('../../src/services/api', () => ({
+  sessionApi: {
+    create: vi.fn(),
+    join: vi.fn(),
+    leave: vi.fn(),
+    get: vi.fn(),
+    startVoting: vi.fn(),
+    vote: vi.fn(),
+    reveal: vi.fn(),
+    newRound: vi.fn(),
+    endSession: vi.fn(),
+    removeParticipant: vi.fn(),
+  }
+}));
+
+vi.mock('../../src/services/auth', () => ({
+  default: {
+    setToken: vi.fn(),
+    getToken: vi.fn(),
+    clearToken: vi.fn(),
+  }
+}));
+
+vi.mock('../../src/services/broadcasting', () => ({
+  subscribeToSession: vi.fn(() => ({})),
+  unsubscribeFromSession: vi.fn(),
+}));
+
+vi.mock('../../src/composables/useLocalStorage', () => ({
+  saveSessionInfo: vi.fn(),
+  clearSessionInfo: vi.fn(),
+  getUserPreferences: vi.fn(() => ({ name: 'Test', emoji: '👤' })),
+  getSessionInfo: vi.fn(),
+}));
+
 import { useSessionStore } from '../../src/stores/sessionStore';
-import { useMockApi } from '../../src/composables/useMockApi';
+import { sessionApi } from '../../src/services/api';
+
+/**
+ * Helper: set up an active session with 5 participants.
+ * The current user (id: 1) is facilitator.
+ */
+function setupSession(store) {
+  store.sessionCode = 'TEST01';
+  store.inSession = true;
+  store.currentUser = { id: 1, name: 'Test', emoji: '👤', isFacilitator: true };
+  store.participants = [
+    { id: 1, name: 'Test', emoji: '👤', hasVoted: false, vote: null, isUser: true },
+    { id: 2, name: 'Alice', emoji: '👩', hasVoted: false, vote: null, isUser: false },
+    { id: 3, name: 'Bob', emoji: '👨', hasVoted: false, vote: null, isUser: false },
+    { id: 4, name: 'Charlie', emoji: '🧑', hasVoted: false, vote: null, isUser: false },
+    { id: 5, name: 'Diana', emoji: '👸', hasVoted: false, vote: null, isUser: false },
+  ];
+}
 
 describe('Voting Flow Integration', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.useFakeTimers();
+
+    sessionApi.startVoting.mockResolvedValue({});
+    sessionApi.vote.mockResolvedValue({});
+    sessionApi.reveal.mockResolvedValue({});
+    sessionApi.newRound.mockResolvedValue({});
   });
 
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('completes a full voting round with user selection', () => {
+  it('completes a full voting round with user selection', async () => {
     const store = useSessionStore();
-    const mockApi = useMockApi();
-
-    // Create session first
-    store.createSession({ name: 'Test', emoji: '👤' });
+    setupSession(store);
 
     // Start voting round
-    mockApi.startVotingRound();
+    await store.startVoting();
 
     expect(store.isVoting).toBe(true);
     expect(store.timerSeconds).toBe(15);
     expect(store.votedCount).toBe(0);
 
     // User selects a card
-    store.selectCard(5);
+    await store.selectCard(5);
 
     expect(store.userCard).toBe(5);
     expect(store.votedCount).toBe(1);
 
-    // Simulate AI participants voting (they have delays, so advance time)
-    vi.advanceTimersByTime(12000); // 12 seconds - all AI should have voted
+    // Simulate AI participants voting
+    store.simulateParticipantVote(2, 3);
+    store.simulateParticipantVote(3, 5);
+    store.simulateParticipantVote(4, 8);
+    store.simulateParticipantVote(5, 5);
 
     expect(store.votedCount).toBe(5);
+
+    // Timer expires and facilitator auto-reveals
+    await vi.advanceTimersByTimeAsync(15000);
+
     expect(store.isRevealed).toBe(true);
     expect(store.isVoting).toBe(false);
 
@@ -44,79 +107,66 @@ describe('Voting Flow Integration', () => {
     expect(store.averageVote).toBeDefined();
     expect(store.consensus).toBeDefined();
     expect(store.mostVoted).toBeDefined();
-
-    // Cleanup
-    mockApi.cleanup();
   });
 
-  it('auto-reveals when timer expires', () => {
+  it('auto-reveals when timer expires', async () => {
     const store = useSessionStore();
+    setupSession(store);
 
-    // Create session first
-    store.createSession({ name: 'Test', emoji: '👤' });
-
-    // Start voting WITHOUT mock API so AI doesn't vote
-    store.startVoting();
+    await store.startVoting();
 
     expect(store.isVoting).toBe(true);
     expect(store.isRevealed).toBe(false);
 
     // User votes
-    store.selectCard(3);
+    await store.selectCard(3);
 
-    // Let timer expire (15 seconds)
-    vi.advanceTimersByTime(15000);
+    // Let timer expire (15 seconds) — facilitator auto-reveals
+    await vi.advanceTimersByTimeAsync(15000);
 
     expect(store.timerSeconds).toBe(0);
     expect(store.isRevealed).toBe(true);
     expect(store.isVoting).toBe(false);
   });
 
-  it('can force reveal before timer expires', () => {
+  it('can force reveal before timer expires', async () => {
     const store = useSessionStore();
-    const mockApi = useMockApi();
+    setupSession(store);
 
-    // Create session first
-    store.createSession({ name: 'Test', emoji: '👤' });
-
-    mockApi.startVotingRound();
+    await store.startVoting();
 
     expect(store.isVoting).toBe(true);
 
     // User votes
-    store.selectCard(5);
+    await store.selectCard(5);
 
-    // Force reveal after 5 seconds
+    // Advance 5 seconds — not yet expired
     vi.advanceTimersByTime(5000);
 
     expect(store.isRevealed).toBe(false);
 
-    mockApi.forceReveal();
+    // Force reveal
+    await store.revealCards();
 
     expect(store.isRevealed).toBe(true);
     expect(store.isVoting).toBe(false);
-
-    mockApi.cleanup();
   });
 
-  it('can start multiple rounds', () => {
+  it('can start multiple rounds', async () => {
     const store = useSessionStore();
-    const mockApi = useMockApi();
-
-    // Create session first
-    store.createSession({ name: 'Test', emoji: '👤' });
+    setupSession(store);
 
     // Round 1
     expect(store.currentRound).toBe(1);
-    mockApi.startVotingRound();
-    store.selectCard(5);
-    vi.advanceTimersByTime(15000);
+    await store.startVoting();
+    await store.selectCard(5);
+    await vi.advanceTimersByTimeAsync(15000);
 
     expect(store.isRevealed).toBe(true);
     expect(store.currentRound).toBe(1);
 
     // Round 2
-    mockApi.startNewRound();
+    await store.startNewRound();
 
     expect(store.currentRound).toBe(2);
     expect(store.isVoting).toBe(true);
@@ -124,47 +174,40 @@ describe('Voting Flow Integration', () => {
     expect(store.userCard).toBeNull();
     expect(store.votedCount).toBe(0);
 
-    store.selectCard(8);
-    vi.advanceTimersByTime(15000);
+    await store.selectCard(8);
+    await vi.advanceTimersByTimeAsync(15000);
 
     expect(store.isRevealed).toBe(true);
-
-    mockApi.cleanup();
   });
 
-  it('resets participant votes between rounds', () => {
+  it('resets participant votes between rounds', async () => {
     const store = useSessionStore();
-    const mockApi = useMockApi();
-
-    // Create session first
-    store.createSession({ name: 'Test', emoji: '👤' });
+    setupSession(store);
 
     // Round 1
-    mockApi.startVotingRound();
-    store.selectCard(3);
-    vi.advanceTimersByTime(12000);
+    await store.startVoting();
+    await store.selectCard(3);
+    store.simulateParticipantVote(2, 5);
+    store.simulateParticipantVote(3, 8);
+    store.simulateParticipantVote(4, 3);
+    store.simulateParticipantVote(5, 5);
 
     const firstRoundVotes = store.participants.map(p => p.vote);
     expect(firstRoundVotes.every(v => v !== null)).toBe(true);
 
     // Round 2
-    mockApi.startNewRound();
+    await store.startNewRound();
 
     // All votes should be reset
     expect(store.participants.every(p => p.vote === null)).toBe(true);
     expect(store.participants.every(p => !p.hasVoted)).toBe(true);
-
-    mockApi.cleanup();
   });
 
-  it('calculates statistics correctly after reveal', () => {
+  it('calculates statistics correctly after reveal', async () => {
     const store = useSessionStore();
-    const mockApi = useMockApi();
+    setupSession(store);
 
-    // Create session first
-    store.createSession({ name: 'Test', emoji: '👤' });
-
-    mockApi.startVotingRound();
+    await store.startVoting();
 
     // Manually set votes for predictable test
     store.participants[0].hasVoted = true;
@@ -178,7 +221,7 @@ describe('Voting Flow Integration', () => {
     store.participants[4].hasVoted = true;
     store.participants[4].vote = 8;
 
-    mockApi.forceReveal();
+    await store.revealCards();
 
     expect(store.isRevealed).toBe(true);
 
@@ -190,18 +233,13 @@ describe('Voting Flow Integration', () => {
 
     // Consensus should be "Spread" (difference between 8 and 3 is 5)
     expect(store.consensus).toBe('Spread 🤔');
-
-    mockApi.cleanup();
   });
 
-  it('handles special votes (? and ☕) correctly', () => {
+  it('handles special votes (? and ☕) correctly', async () => {
     const store = useSessionStore();
-    const mockApi = useMockApi();
+    setupSession(store);
 
-    // Create session first
-    store.createSession({ name: 'Test', emoji: '👤' });
-
-    mockApi.startVotingRound();
+    await store.startVoting();
 
     // Set votes with special values
     store.participants[0].hasVoted = true;
@@ -215,32 +253,27 @@ describe('Voting Flow Integration', () => {
     store.participants[4].hasVoted = true;
     store.participants[4].vote = -2; // ☕
 
-    mockApi.forceReveal();
+    await store.revealCards();
 
     // Average should exclude ? and ☕
     // Average = (3 + 5 + 8) / 3 = 5.3
     expect(store.averageVote).toBe('5.3');
-
-    mockApi.cleanup();
   });
 
-  it('stops timers on cleanup', () => {
+  it('stops timers on cleanup', async () => {
     const store = useSessionStore();
-    const mockApi = useMockApi();
+    setupSession(store);
 
-    // Create session first
-    store.createSession({ name: 'Test', emoji: '👤' });
+    await store.startVoting();
 
-    mockApi.startVotingRound();
+    expect(store.isVoting).toBe(true);
 
-    const initialSeconds = store.timerSeconds;
+    store.stopTimer();
 
-    mockApi.cleanup();
-
-    // Advance time - timer should not change
+    const currentSeconds = store.timerSeconds;
     vi.advanceTimersByTime(5000);
 
-    // Timer should have stopped
-    expect(store.isVoting).toBe(true); // State doesn't change
+    // Timer should not advance after stopTimer
+    expect(store.timerSeconds).toBe(currentSeconds);
   });
 });
